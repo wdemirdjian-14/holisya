@@ -1,0 +1,23 @@
+{
+  "name": "Holisya — Bien-être Holistique Féminin",
+  "short_name": "Holisya",
+  "description": "Kobido, drainage lymphatique, nutrition et rituels bien-être. Réservez et suivez vos soins.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F8F4EF",
+  "theme_color": "#C98F79",
+  "lang": "fr",
+  "categories": ["health", "lifestyle", "wellness"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Prendre rendez-vous", "url": "/rendez-vous" },
+    { "name": "Mon espace", "url": "/espace-membre" },
+    { "name": "Nos soins", "url": "/services" }
+  ]
+}

@@ -1,0 +1,497 @@
+generator client {
+    provider = "prisma-client-js"
+    binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum GiftCardStatus {
+  ACTIVE
+  USED
+  EXPIRED
+  PARTIALLY_USED
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAUSED
+  CANCELLED
+  EXPIRED
+}
+
+model User {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  password       String
+  firstName      String    @default("")
+  lastName       String    @default("")
+  phone          String    @default("")
+  photoUrl       String    @default("")
+  role           Role      @default(USER)
+  carePreferences String   @default("")
+  credits        Int       @default(0)
+  resetToken     String?   @unique
+  resetTokenExpiry DateTime?
+  source         String    @default("signup")
+  emailOptOut    Boolean   @default(false)
+  unsubscribeToken String? @unique
+  privateNotes   String    @default("")
+  loyaltyPoints  Int       @default(0)
+  referralCode   String?   @unique
+  referredById   String?
+  referralRewarded Boolean @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  appointments       Appointment[]
+  giftCardsPurchased GiftCard[]      @relation("PurchasedBy")
+  giftCardsReceived  GiftCard[]      @relation("ReceivedBy")
+  subscriptions      Subscription[]
+  creditTransfersSent    CreditTransfer[] @relation("TransferSender")
+  creditTransfersReceived CreditTransfer[] @relation("TransferReceiver")
+  testimonials       Testimonial[]
+  contactRequests    ContactRequest[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model Appointment {
+  id          String            @id @default(cuid())
+  userId      String
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  serviceType String
+  therapist   String            @default("Lamyae")
+  date        DateTime
+  duration    Int               @default(60)
+  status      AppointmentStatus @default(PENDING)
+  creditUsed  Int               @default(0)
+  notes       String            @default("")
+  reviewEmailSent Boolean       @default(false)
+  reviewToken String?           @unique
+  reviewedAt  DateTime?
+  reminderSent Boolean          @default(false)
+  clientRequest String          @default("")
+  clientRequestNote String       @default("")
+  source      String            @default("admin")
+  imprintSetupId String         @default("")
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  payments    Payment[]
+
+  @@index([userId])
+  @@index([date])
+  @@index([status])
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  GIFT_CARD
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  appointmentId String
+  appointment   Appointment   @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  method        PaymentMethod
+  amount        Float
+  giftCardCode  String        @default("")
+  notes         String        @default("")
+  createdAt     DateTime      @default(now())
+
+  @@index([appointmentId])
+}
+
+model GiftCard {
+  id              String         @id @default(cuid())
+  code            String         @unique
+  amount          Float
+  remainingAmount Float
+  purchasedById   String
+  purchasedBy     User           @relation("PurchasedBy", fields: [purchasedById], references: [id], onDelete: Cascade)
+  receivedById    String?
+  receivedBy      User?          @relation("ReceivedBy", fields: [receivedById], references: [id])
+  recipientEmail  String         @default("")
+  recipientName   String         @default("")
+  personalMessage String         @default("")
+  careType        String         @default("")
+  status          GiftCardStatus @default(ACTIVE)
+  stripePaymentId String         @default("")
+  paymentMethod   String         @default("")
+  promoCodeUsed   String         @default("")
+  expiresAt       DateTime
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([code])
+  @@index([purchasedById])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+model Subscription {
+  id                 String             @id @default(cuid())
+  userId             String
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planName           String
+  planDescription    String             @default("")
+  priceMonthly       Float
+  creditsPerMonth    Int
+  creditsUsed        Int                @default(0)
+  creditsRemaining   Int
+  billingCycle       String             @default("monthly")
+  status             SubscriptionStatus @default(ACTIVE)
+  autoRenew          Boolean            @default(true)
+  stripeSubscriptionId String           @default("")
+  stripeCustomerId   String             @default("")
+  currentPeriodStart DateTime           @default(now())
+  currentPeriodEnd   DateTime
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+model CreditTransfer {
+  id         String   @id @default(cuid())
+  senderId   String
+  sender     User     @relation("TransferSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId String
+  receiver   User     @relation("TransferReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  amount     Int
+  message    String   @default("")
+  createdAt  DateTime @default(now())
+
+  @@index([senderId])
+  @@index([receiverId])
+}
+
+model DiscountCode {
+  id            String    @id @default(cuid())
+  code          String    @unique
+  type          String    @default("fixed")
+  value         Float
+  maxUses       Int       @default(0)
+  currentUses   Int       @default(0)
+  minPurchase   Float     @default(0)
+  description   String    @default("")
+  isActive      Boolean   @default(true)
+  expiresAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([code])
+  @@index([isActive])
+}
+
+model Testimonial {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  name      String
+  rating    Int      @default(5)
+  comment   String
+  serviceType String @default("")
+  isApproved Boolean @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([isApproved])
+}
+
+model BlogPost {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  excerpt     String   @default("")
+  content     String
+  imageUrl    String   @default("")
+  sourceUrl   String   @default("")
+  category    String   @default("")
+  tags        String   @default("")
+  authorName  String   @default("Lamyae")
+  isPublished Boolean  @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([slug])
+  @@index([isPublished])
+}
+
+model ContactRequest {
+  id          String    @id @default(cuid())
+  userId      String?
+  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  firstName   String
+  phone       String
+  message     String    @default("")
+  status      String    @default("new")
+  adminReply  String    @default("")
+  respondedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([status])
+}
+
+model Service {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String
+  longDescription String @default("")
+  duration    Int      @default(60)
+  price       Float
+  imageUrl    String   @default("")
+  category    String   @default("")
+  benefits    String   @default("")
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([slug])
+  @@index([isActive])
+}
+
+model GalleryPhoto {
+  id        String   @id @default(cuid())
+  imageUrl  String
+  caption   String   @default("")
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+model SiteContent {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model AgendaSettings {
+  id           String   @id @default("global")
+  openDays     String   @default("1,2,3,4,5")
+  openTime     String   @default("09:00")
+  closeTime    String   @default("18:00")
+  breakMinutes Int      @default(15)
+  updatedAt    DateTime @updatedAt
+}
+
+enum EmailStatus {
+  SENT
+  FAILED
+}
+
+model EmailTemplate {
+  id        String   @id @default(cuid())
+  name      String
+  subject   String
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+}
+
+model EmailLog {
+  id             String      @id @default(cuid())
+  recipientEmail String
+  recipientName  String      @default("")
+  subject        String
+  templateId     String      @default("")
+  status         EmailStatus @default(SENT)
+  error          String      @default("")
+  createdAt      DateTime    @default(now())
+
+  @@index([recipientEmail])
+  @@index([createdAt])
+}
+
+model SubscriptionPlan {
+  id              String  @id @default(cuid())
+  name            String
+  description     String  @default("")
+  priceMonthly    Float
+  priceQuarterly  Float   @default(0)
+  creditsPerMonth Int
+  features        String  @default("")
+  isActive        Boolean @default(true)
+  stripePriceIdMonthly    String @default("")
+  stripePriceIdQuarterly  String @default("")
+  sortOrder       Int     @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+model VideoContent {
+  id            String   @id @default(cuid())
+  title         String
+  slug          String   @unique
+  description   String   @default("")
+  thumbnailUrl  String   @default("")
+  fileName      String   @default("")
+  durationSec   Int      @default(0)
+  priceCents    Int      @default(0)
+  isPremiumOnly Boolean  @default(true)
+  isPublished   Boolean  @default(false)
+  chapters      String   @default("")
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  accesses      VideoAccess[]
+  views         VideoView[]
+
+  @@index([slug])
+  @@index([isPublished])
+}
+
+model VideoAccess {
+  id        String   @id @default(cuid())
+  userId    String
+  videoId   String
+  video     VideoContent @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  source    String   @default("purchase")
+  stripePaymentId String @default("")
+  createdAt DateTime @default(now())
+
+  @@unique([userId, videoId])
+  @@index([userId])
+  @@index([videoId])
+}
+
+model VideoView {
+  id            String   @id @default(cuid())
+  userId        String
+  videoId       String
+  video         VideoContent @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  secondsWatched Int     @default(0)
+  lastPositionSec Int    @default(0)
+  completed     Boolean  @default(false)
+  viewCount     Int      @default(0)
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, videoId])
+  @@index([videoId])
+}
+
+model LoyaltyTransaction {
+  id        String   @id @default(cuid())
+  userId    String
+  points    Int
+  reason    String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model WellnessEntry {
+  id            String   @id @default(cuid())
+  userId        String
+  appointmentId String   @default("")
+  mood          Int      @default(3)
+  note          String   @default("")
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String   @default("")
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model PlanityBooking {
+  id            String   @id @default(cuid())
+  messageId     String   @unique
+  firstName     String   @default("")
+  lastName      String   @default("")
+  email         String   @default("")
+  phone         String   @default("")
+  serviceType   String   @default("")
+  date          DateTime
+  durationMin   Int      @default(60)
+  status        String   @default("pending")
+  appointmentId String   @default("")
+  rawSubject    String   @default("")
+  createdAt     DateTime @default(now())
+
+  @@index([status])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  audience  String   @default("user")
+  userId    String   @default("")
+  type      String   @default("info")
+  title     String
+  body      String   @default("")
+  url       String   @default("")
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([audience, read])
+  @@index([userId, read])
+  @@index([createdAt])
+}
+
+model BookingSettings {
+  id                   String   @id @default("global")
+  onlineBookingEnabled Boolean  @default(false)
+  requireCardImprint   Boolean  @default(false)
+  autoConfirm          Boolean  @default(false)
+  slotGranularityMin   Int      @default(15)
+  minNoticeHours       Int      @default(2)
+  maxAdvanceDays       Int      @default(60)
+  breakMinutes         Int      @default(15)
+  updatedAt            DateTime @updatedAt
+}
+
+model AvailabilityWindow {
+  id        String   @id @default(cuid())
+  weekday   Int
+  startTime String   @default("09:00")
+  endTime   String   @default("18:00")
+  createdAt DateTime @default(now())
+
+  @@index([weekday])
+}
+
+model AvailabilityClosure {
+  id        String   @id @default(cuid())
+  date      DateTime @unique
+  reason    String   @default("")
+  createdAt DateTime @default(now())
+}
