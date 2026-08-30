@@ -329,6 +329,50 @@ export default function AdminDashboard() {
       {/* Overview Tab */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
+          {/* Prochains rendez-vous */}
+          {(() => {
+            const upcoming = (appointments ?? [])
+              .filter((a: any) => a?.date && new Date(a.date).getTime() >= Date.now() && a?.status !== 'CANCELLED')
+              .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+            return (
+              <div className="bg-white rounded-xl shadow-sm p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="font-playfair text-xl font-semibold text-[#3B312D] flex items-center gap-2"><Calendar size={18} className="text-[#C98F79]" />Prochains rendez-vous</h2>
+                  <span className="text-xs text-[#3B312D]/50">{upcoming.length}</span>
+                </div>
+                {upcoming.length === 0 ? (
+                  <p className="text-sm text-[#3B312D]/40 py-6 text-center">Aucun rendez-vous à venir</p>
+                ) : (
+                  <div className="max-h-[420px] overflow-y-auto divide-y divide-[#F8F4EF] -mx-1">
+                    {upcoming.map((apt: any) => {
+                      const d = new Date(apt.date);
+                      const isPaid = (apt?.payments ?? []).length > 0;
+                      return (
+                        <button key={apt.id} onClick={() => { setModalData(apt); setShowModal('edit-appointment'); }}
+                          className="w-full text-left px-1 py-3 hover:bg-[#F8F4EF]/50 rounded-lg transition-colors flex items-center gap-3">
+                          <div className="flex-shrink-0 w-14 text-center">
+                            <p className="text-[10px] uppercase text-[#3B312D]/40 leading-tight">{d.toLocaleDateString('fr-FR', { weekday: 'short' })}</p>
+                            <p className="font-playfair text-lg font-bold text-[#C98F79] leading-tight">{d.getDate()}</p>
+                            <p className="text-[10px] text-[#3B312D]/40 leading-tight">{d.toLocaleDateString('fr-FR', { month: 'short' })}</p>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-[#3B312D] truncate">{d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} · {apt?.serviceType || 'Soin'} <span className="text-xs font-normal text-[#3B312D]/40">({apt?.duration ?? 60} min)</span></p>
+                            <p className="text-xs text-[#3B312D]/60 truncate">{apt?.user?.firstName ?? ''} {apt?.user?.lastName ?? ''}</p>
+                          </div>
+                          <div className="flex-shrink-0 flex items-center gap-1.5">
+                            {isPaid && <Euro size={13} className="text-[#AAB7A0]" />}
+                            {apt?.source === 'online' && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[#3B312D] text-white">En ligne</span>}
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${apt?.status === 'CONFIRMED' ? 'bg-[#AAB7A0]/20 text-[#AAB7A0]' : 'bg-yellow-100 text-yellow-700'}`}>{apt?.status === 'CONFIRMED' ? 'Confirmé' : 'À confirmer'}</span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
           <PlanityTasks onChange={refreshData} />
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {[{ label: 'CA encaissé (mois)', value: `${stats?.realRevenueThisMonth?.toFixed?.(0) ?? 0}€`, icon: Euro, color: 'text-[#C98F79]' },
