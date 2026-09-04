@@ -44,15 +44,17 @@ export default function HomeClient({ galleryPhotos = [], latestPosts = [], conte
   const heroY = useTransform(scrollYProgress, [0, 1], ['0%', '30%']);
   const heroOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
 
-  // Sur mobile / connexion lente : image poster au lieu de la vidéo de 54 Mo.
+  // Vidéo légère (622 Ko) sur mobile, version HD sur desktop. Image seule si "économie de données".
   const [showVideo, setShowVideo] = useState(false);
+  const [videoSrc, setVideoSrc] = useState('/videos/hero-mobile.mp4');
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const conn = (navigator as any)?.connection;
     const saveData = conn?.saveData === true;
-    const slow = conn && ['slow-2g', '2g', '3g'].includes(conn.effectiveType);
+    const verySlow = conn && ['slow-2g', '2g'].includes(conn.effectiveType);
     const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
-    if (isDesktop && !saveData && !slow) setShowVideo(true);
+    setVideoSrc(isDesktop ? '/videos/hero.mp4' : '/videos/hero-mobile.mp4');
+    if (!saveData && !verySlow) setShowVideo(true);
   }, []);
 
   return (
@@ -61,8 +63,8 @@ export default function HomeClient({ galleryPhotos = [], latestPosts = [], conte
       <section ref={heroRef} className="relative h-[100svh] overflow-hidden">
         <motion.div style={{ y: heroY }} className="absolute inset-0">
           {showVideo ? (
-            <video autoPlay muted loop playsInline preload="metadata" className="w-full h-full object-cover" poster="/images/hero-wellness.jpg">
-              <source src="/videos/hero.mp4" type="video/mp4" />
+            <video autoPlay muted loop playsInline preload="auto" className="w-full h-full object-cover" poster="/images/hero-wellness.jpg">
+              <source src={videoSrc} type="video/mp4" />
             </video>
           ) : (
             <Image src="/images/hero-wellness.jpg" alt="" fill priority className="object-cover" sizes="100vw" />
