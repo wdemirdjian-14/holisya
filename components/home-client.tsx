@@ -44,7 +44,8 @@ export default function HomeClient({ galleryPhotos = [], latestPosts = [], conte
   const heroY = useTransform(scrollYProgress, [0, 1], ['0%', '30%']);
   const heroOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
 
-  // Vidéo légère (622 Ko) sur mobile, version HD sur desktop. Image seule si "économie de données".
+  // Vidéo légère (~1,9 Mo) sur mobile, version HD sur desktop. Image seule si "économie de données".
+  const videoElRef = useRef<HTMLVideoElement>(null);
   const [showVideo, setShowVideo] = useState(false);
   const [videoSrc, setVideoSrc] = useState('/videos/hero-mobile.mp4');
   useEffect(() => {
@@ -57,13 +58,25 @@ export default function HomeClient({ galleryPhotos = [], latestPosts = [], conte
     if (!saveData && !verySlow) setShowVideo(true);
   }, []);
 
+  // Autoplay fiable (iOS exige muted + playsInline + appel play() explicite).
+  useEffect(() => {
+    const v = videoElRef.current;
+    if (!showVideo || !v) return;
+    v.muted = true;
+    (v as any).playsInline = true;
+    const tryPlay = () => v.play().catch(() => {});
+    tryPlay();
+    v.addEventListener('canplay', tryPlay, { once: true });
+    return () => v.removeEventListener('canplay', tryPlay);
+  }, [showVideo, videoSrc]);
+
   return (
     <main>
       {/* Hero Section */}
       <section ref={heroRef} className="relative h-[100svh] overflow-hidden">
         <motion.div style={{ y: heroY }} className="absolute inset-0">
           {showVideo ? (
-            <video autoPlay muted loop playsInline preload="auto" className="w-full h-full object-cover" poster="/images/hero-wellness.jpg">
+            <video ref={videoElRef} autoPlay muted loop playsInline preload="auto" className="w-full h-full object-cover" poster="/images/hero-wellness.jpg">
               <source src={videoSrc} type="video/mp4" />
             </video>
           ) : (
