@@ -1128,7 +1128,7 @@ export default function AdminDashboard() {
                     <label className={`px-4 py-2 text-sm rounded-lg border border-[#F8F4EF] cursor-pointer flex items-center gap-2 ${!modalData?.id ? 'opacity-40 pointer-events-none' : 'hover:bg-[#F8F4EF]'}`}>
                       <ImageIcon size={14} className="text-[#C98F79]" />
                       {uploadingPhoto ? 'Envoi...' : 'Importer une photo'}
-                      <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" disabled={!modalData?.id || uploadingPhoto}
+                      <input type="file" accept="image/*,.heic,.heif" className="hidden" disabled={!modalData?.id || uploadingPhoto}
                         onChange={(e: any) => uploadBlogPhoto(modalData?.id, e.target?.files?.[0])} />
                     </label>
                     {!modalData?.id && <span className="text-xs text-[#3B312D]/40">Enregistrez l'article avant d'ajouter une photo</span>}
@@ -1204,15 +1204,17 @@ export default function AdminDashboard() {
                         className="absolute top-2 right-2 p-1.5 bg-white/90 rounded-full hover:bg-white"><Trash2 size={14} className="text-red-500" /></button>
                     </div>
                   )}
-                  <div className="mt-2 flex items-center gap-3">
-                    <label className={`px-4 py-2 text-sm rounded-lg border border-[#F8F4EF] cursor-pointer flex items-center gap-2 ${!modalData?.id ? 'opacity-40 pointer-events-none' : 'hover:bg-[#F8F4EF]'}`}>
-                      <ImageIcon size={14} className="text-[#C98F79]" />
-                      {uploadingPhoto ? 'Envoi...' : 'Importer une photo'}
-                      <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" disabled={!modalData?.id || uploadingPhoto}
-                        onChange={(e: any) => uploadServicePhoto(modalData?.id, e.target?.files?.[0])} />
-                    </label>
-                    {!modalData?.id && <span className="text-xs text-[#3B312D]/40">Enregistrez le service avant d'ajouter une photo</span>}
-                  </div>
+                  <label
+                    onDragOver={(e) => { if (modalData?.id) { e.preventDefault(); } }}
+                    onDrop={(e) => { if (modalData?.id && !uploadingPhoto) { e.preventDefault(); uploadServicePhoto(modalData?.id, e.dataTransfer.files?.[0]); } }}
+                    className={`mt-2 flex flex-col items-center justify-center gap-1 border-2 border-dashed rounded-lg py-5 cursor-pointer transition-colors ${!modalData?.id ? 'opacity-40 pointer-events-none border-[#3B312D]/15' : 'border-[#3B312D]/15 hover:border-[#C98F79]/50'}`}>
+                    <ImageIcon size={18} className="text-[#C98F79]" />
+                    <span className="text-sm text-[#3B312D]/70">{uploadingPhoto ? 'Envoi…' : 'Glissez une photo ici, ou cliquez'}</span>
+                    <span className="text-[10px] text-[#3B312D]/40">JPEG, PNG, HEIC (iPhone)… converties automatiquement</span>
+                    <input type="file" accept="image/*,.heic,.heif" className="hidden" disabled={!modalData?.id || uploadingPhoto}
+                      onChange={(e: any) => uploadServicePhoto(modalData?.id, e.target?.files?.[0])} />
+                  </label>
+                  {!modalData?.id && <span className="text-xs text-[#3B312D]/40 mt-1 inline-block">Enregistrez le service avant d'ajouter une photo</span>}
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div><label className="text-sm font-medium text-[#3B312D]/70">Ordre d'affichage</label>

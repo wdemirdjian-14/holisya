@@ -3,11 +3,10 @@ import { NextResponse, NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
+import { processAndSaveImage } from '@/lib/image-process';
 
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-const MAX_SIZE = 8 * 1024 * 1024;
+const MAX_SIZE = 25 * 1024 * 1024;
 const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads', 'gallery');
 
 export async function POST(req: NextRequest) {
@@ -19,20 +18,19 @@ export async function POST(req: NextRequest) {
     const files = formData.getAll('files') as File[];
     if (!files || files.length === 0) return NextResponse.json({ error: 'Fichier(s) requis' }, { status: 400 });
 
-    await mkdir(UPLOAD_DIR, { recursive: true });
     const maxSort = await prisma.galleryPhoto.aggregate({ _max: { sortOrder: true } });
     let nextSort = (maxSort._max.sortOrder ?? 0) + 1;
 
     const created = [];
     for (const file of files) {
-      if (!ALLOWED_TYPES.includes(file.type) || file.size > MAX_SIZE) continue;
-      const ext = (file.type.split('/')[1] ?? 'jpg').replace('jpeg', 'jpg');
-      const filename = `gallery-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-      const buffer = Buffer.from(await file.arrayBuffer());
-      await writeFile(path.join(UPLOAD_DIR, filename), buffer);
-      const photo = await prisma.galleryPhoto.create({ data: { imageUrl: `/uploads/gallery/${filename}`, sortOrder: nextSort } });
-      created.push(photo);
-      nextSort += 1;
+      if (file.size > MAX_SIZE) continue;
+      try {
+        const buffer = Buffer.from(await file.arrayBuffer());
+        const filename = await processAndSaveImage({ input: buffer, mime: file.type, destDir: UPLOAD_DIR, baseName: `gallery-${Date.now()}-${Math.random().toString(36).slice(2, 8)}` });
+        const photo = await prisma.galleryPhoto.create({ data: { imageUrl: `/uploads/gallery/${filename}`, sortOrder: nextSort } });
+        created.push(photo);
+        nextSort += 1;
+      } catch (e) { console.error('gallery image skip', e); }
     }
 
     return NextResponse.json({ photos: created });

@@ -7,6 +7,7 @@ export default function GalleryTab() {
   const [photos, setPhotos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [dragging, setDragging] = useState(false);
 
   const load = () => {
     setLoading(true);
@@ -50,9 +51,21 @@ export default function GalleryTab() {
         </div>
         <label className={`px-4 py-2 bg-[#C98F79] text-white text-sm rounded-lg flex items-center gap-2 cursor-pointer ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
           <Plus size={14} />{uploading ? 'Import...' : 'Importer des photos'}
-          <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple className="hidden" disabled={uploading} onChange={(e: any) => upload(e.target?.files)} />
+          <input type="file" accept="image/*,.heic,.heif" multiple className="hidden" disabled={uploading} onChange={(e: any) => upload(e.target?.files)} />
         </label>
       </div>
+
+      {/* Zone de glisser-déposer */}
+      <label
+        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(e) => { e.preventDefault(); setDragging(false); upload(e.dataTransfer.files); }}
+        className={`mb-6 flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-xl py-8 cursor-pointer transition-colors ${dragging ? 'border-[#C98F79] bg-[#C98F79]/5' : 'border-[#3B312D]/15 hover:border-[#C98F79]/50'} ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
+        {uploading ? <Loader2 size={22} className="animate-spin text-[#C98F79]" /> : <ImageIcon size={22} className="text-[#C98F79]" />}
+        <p className="text-sm text-[#3B312D]/70">{uploading ? 'Import en cours…' : 'Glissez vos photos ici, ou cliquez pour les choisir'}</p>
+        <p className="text-xs text-[#3B312D]/40">JPEG, PNG, HEIC (iPhone)… converties automatiquement</p>
+        <input type="file" accept="image/*,.heic,.heif" multiple className="hidden" disabled={uploading} onChange={(e: any) => upload(e.target?.files)} />
+      </label>
 
       {photos.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm p-10 text-center">

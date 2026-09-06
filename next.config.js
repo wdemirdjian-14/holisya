@@ -7,6 +7,7 @@ const nextConfig = {
   productionBrowserSourceMaps: false,
   experimental: {
     outputFileTracingRoot: path.join(__dirname, '../'),
+    serverComponentsExternalPackages: ['sharp', 'heic-convert'],
   },
   eslint: {
     ignoreDuringBuilds: true,
