@@ -164,7 +164,7 @@ export default function ServicesClient() {
   return (
     <>
       {Intro}
-      <div ref={containerRef} className="relative bg-white" style={{ height: `${services.length * 90}vh` }}>
+      <div ref={containerRef} className="relative bg-white" style={{ height: `${services.length * 62}vh` }}>
         <div className="sticky top-0 h-screen overflow-hidden flex items-center">
           {services.map((s: any, i: number) => (
             <OfferSlide key={i} s={s} i={i} total={services.length} progress={scrollYProgress} />
