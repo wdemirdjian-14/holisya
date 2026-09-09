@@ -38,7 +38,7 @@ const testimonials = [
   { name: 'Gigi D.', text: 'Après ma séance de Kobido, ma peau était visiblement plus lumineuse. Une détente profonde qui dure plusieurs jours !', rating: 5 },
 ];
 
-export default function HomeClient({ galleryPhotos = [], latestPosts = [], content = {} }: { galleryPhotos?: { id: string; imageUrl: string; caption?: string }[]; latestPosts?: any[]; content?: Record<string, string> }) {
+export default function HomeClient({ galleryPhotos = [], latestPosts = [], content = {}, subscriptionsEnabled = false }: { galleryPhotos?: { id: string; imageUrl: string; caption?: string }[]; latestPosts?: any[]; content?: Record<string, string>; subscriptionsEnabled?: boolean }) {
   const heroRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
   const heroY = useTransform(scrollYProgress, [0, 1], ['0%', '30%']);
@@ -263,7 +263,9 @@ export default function HomeClient({ galleryPhotos = [], latestPosts = [], conte
             <p className="text-[#3B312D]/60 mt-4 max-w-lg mx-auto">Créez votre espace membre pour accéder à vos soins, gérer vos crédits et profiter d'offres exclusives.</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
               <Link href="/inscription" className="px-8 py-4 bg-[#C98F79] text-white font-medium rounded-lg hover:bg-[#b87d68] transition-all shadow-sm">Créer mon compte</Link>
-              <Link href="/abonnements" className="px-8 py-4 bg-[#AAB7A0] text-white font-medium rounded-lg hover:bg-[#96a58c] transition-all shadow-sm">Voir les abonnements</Link>
+              {subscriptionsEnabled
+                ? <Link href="/abonnements" className="px-8 py-4 bg-[#AAB7A0] text-white font-medium rounded-lg hover:bg-[#96a58c] transition-all shadow-sm">Voir les abonnements</Link>
+                : <Link href="/services" className="px-8 py-4 bg-[#AAB7A0] text-white font-medium rounded-lg hover:bg-[#96a58c] transition-all shadow-sm">Découvrir les services</Link>}
             </div>
           </motion.div>
         </div>

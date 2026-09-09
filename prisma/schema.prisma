@@ -470,6 +470,7 @@ model Notification {
 model BookingSettings {
   id                   String   @id @default("global")
   onlineBookingEnabled Boolean  @default(false)
+  subscriptionsEnabled Boolean  @default(false)
   requireCardImprint   Boolean  @default(false)
   autoConfirm          Boolean  @default(false)
   slotGranularityMin   Int      @default(15)

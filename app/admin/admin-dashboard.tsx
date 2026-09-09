@@ -20,6 +20,7 @@ const PlanityTasks = dynamic(() => import('./planity-tasks'), { ssr: false });
 const BookingTab = dynamic(() => import('./booking-tab'), { ssr: false, loading: () => <div className="h-64 bg-white rounded-xl animate-pulse" /> });
 const SiteContentTab = dynamic(() => import('./site-content-tab'), { ssr: false, loading: () => <div className="h-64 bg-white rounded-xl animate-pulse" /> });
 const AgendaCalendar = dynamic(() => import('./agenda-calendar'), { ssr: false, loading: () => <div className="h-64 bg-white rounded-xl animate-pulse" /> });
+const SubscriptionsToggle = dynamic(() => import('./subscriptions-toggle'), { ssr: false });
 
 const GIFT_CARD_STATUS_LABEL: Record<string, string> = { ACTIVE: 'Active', USED: 'Utilisée', PARTIALLY_USED: 'Partiellement utilisée', EXPIRED: 'Expirée' };
 const GIFT_CARD_STATUS_COLOR: Record<string, string> = {
@@ -655,6 +656,7 @@ export default function AdminDashboard() {
       {/* Subscriptions Tab */}
       {activeTab === 'subscriptions' && (
         <div>
+          <SubscriptionsToggle />
           <h2 className="font-playfair text-xl font-semibold text-[#3B312D] mb-6">Abonnements Actifs</h2>
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
             <div className="overflow-x-auto">

@@ -25,12 +25,20 @@ export default function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [subsEnabled, setSubsEnabled] = useState(false);
   const isAdmin = (session?.user as any)?.role === 'ADMIN';
+
+  // Le lien "Abonnements" n'apparaît que si l'admin a activé la fonctionnalité.
+  const links = navLinks.filter((l) => l.href !== '/abonnements' || subsEnabled);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', onScroll);
     return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/booking/config').then((r) => r.json()).then((d) => setSubsEnabled(!!d?.subscriptionsEnabled)).catch(() => {});
   }, []);
 
   useEffect(() => { setMobileOpen(false); }, [pathname]);
@@ -49,7 +57,7 @@ export default function Header() {
             <Image src="/images/logo-holisya.png" alt="Holisya" width={160} height={48} className={`h-10 md:h-12 w-auto transition-all ${scrolled || !isHome ? '' : 'brightness-0 invert'}`} priority />
           </Link>
           <nav className="hidden lg:flex items-center gap-1">
-            {navLinks.map((link: any) => (
+            {links.map((link: any) => (
               <Link key={link.href} href={link.href}
                 className={`px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${pathname === link.href ? (scrolled || !isHome ? 'text-[#C98F79] bg-[#C98F79]/10' : 'text-white bg-white/20') : `${textColor} hover:bg-[#C98F79]/10 hover:text-[#C98F79]`}`}>
                 {link.label}
@@ -108,7 +116,7 @@ export default function Header() {
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
             className="lg:hidden bg-white backdrop-blur-md border-t border-[#3B312D]/5 shadow-md">
             <div className="max-w-[1200px] mx-auto px-4 py-4 space-y-1">
-              {navLinks.map((link: any) => (
+              {links.map((link: any) => (
                 <Link key={link.href} href={link.href}
                   className={`block px-4 py-3 rounded-lg text-sm font-medium transition-colors ${pathname === link.href ? 'bg-[#C98F79]/10 text-[#C98F79]' : 'text-[#3B312D] hover:bg-[#C98F79]/10'}`}>
                   {link.label}

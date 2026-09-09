@@ -23,6 +23,7 @@ export async function PUT(req: NextRequest) {
       where: { id: 'global' },
       update: {
         onlineBookingEnabled: d?.onlineBookingEnabled,
+        subscriptionsEnabled: d?.subscriptionsEnabled,
         requireCardImprint: d?.requireCardImprint,
         autoConfirm: d?.autoConfirm,
         slotGranularityMin: d?.slotGranularityMin !== undefined ? num(d.slotGranularityMin, 15) : undefined,

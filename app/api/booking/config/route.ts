@@ -11,9 +11,10 @@ export async function GET() {
       : [];
     return NextResponse.json({
       enabled: settings.onlineBookingEnabled,
+      subscriptionsEnabled: (settings as any).subscriptionsEnabled ?? false,
       requireCardImprint: settings.requireCardImprint,
       maxAdvanceDays: settings.maxAdvanceDays,
       services,
     });
-  } catch (error: any) { console.error(error); return NextResponse.json({ enabled: false, services: [] }); }
+  } catch (error: any) { console.error(error); return NextResponse.json({ enabled: false, subscriptionsEnabled: false, services: [] }); }
 }
