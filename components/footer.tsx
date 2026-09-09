@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Heart } from 'lucide-react';
 import { getSiteContentMap } from '@/lib/site-content';
+import { BUSINESS } from '@/lib/business';
 
 export default async function Footer() {
   const content = await getSiteContentMap(['footer.description', 'footer.signature']);
@@ -31,7 +32,7 @@ export default async function Footer() {
         </div>
         <div className="border-t border-white/10 mt-10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-white/50">© {new Date().getFullYear()} Holisya. Tous droits réservés. <span className="text-white/30 text-xs ml-1">{process.env.APP_VERSION || 'dev'}</span></p>
-          <p className="text-sm text-white/50 flex items-center gap-1">{content['footer.signature']} <Heart size={14} className="text-[#C98F79]" /> à Nice</p>
+          <p className="text-sm text-white/50 flex items-center gap-1">{content['footer.signature']} <Heart size={14} className="text-[#C98F79]" /> à {BUSINESS.city}</p>
         </div>
       </div>
     </footer>

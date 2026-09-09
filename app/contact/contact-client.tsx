@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { MapPin, Phone, Mail, MessageCircle, Send, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { BUSINESS, addressLine } from '@/lib/business';
 
 export default function ContactClient() {
   const [form, setForm] = useState({ firstName: '', phone: '', message: '' });
@@ -35,12 +36,17 @@ export default function ContactClient() {
           <motion.div initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}>
             <h2 className="font-playfair text-2xl font-bold text-[#3B312D] mb-6">Nos Coordonnées</h2>
             <div className="space-y-6">
-              <div className="flex items-start gap-4"><MapPin size={20} className="text-[#C98F79] mt-1" /><div><p className="font-medium text-[#3B312D]">Adresse</p><p className="text-[#3B312D]/60 text-sm">Nice, France</p></div></div>
-              <div className="flex items-start gap-4"><Mail size={20} className="text-[#C98F79] mt-1" /><div><p className="font-medium text-[#3B312D]">Email</p><p className="text-[#3B312D]/60 text-sm">contact@holisya.fr</p></div></div>
-              <a href="https://wa.me/33600000000" target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-3 px-5 py-3 bg-[#25D366] text-white rounded-lg hover:bg-[#20b858] transition-all w-fit">
-                <MessageCircle size={18} />Nous écrire sur WhatsApp
-              </a>
+              <div className="flex items-start gap-4"><MapPin size={20} className="text-[#C98F79] mt-1" /><div><p className="font-medium text-[#3B312D]">Adresse</p><p className="text-[#3B312D]/60 text-sm">{addressLine()}<br />Aux portes de Paris (Ouest parisien)</p></div></div>
+              {BUSINESS.phone && (
+                <div className="flex items-start gap-4"><Phone size={20} className="text-[#C98F79] mt-1" /><div><p className="font-medium text-[#3B312D]">Téléphone</p><a href={`tel:${BUSINESS.phone}`} className="text-[#3B312D]/60 text-sm hover:text-[#C98F79]">{BUSINESS.phoneDisplay || BUSINESS.phone}</a></div></div>
+              )}
+              <div className="flex items-start gap-4"><Mail size={20} className="text-[#C98F79] mt-1" /><div><p className="font-medium text-[#3B312D]">Email</p><a href={`mailto:${BUSINESS.email}`} className="text-[#3B312D]/60 text-sm hover:text-[#C98F79]">{BUSINESS.email}</a></div></div>
+              {BUSINESS.whatsapp && (
+                <a href={`https://wa.me/${BUSINESS.whatsapp}`} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-3 px-5 py-3 bg-[#25D366] text-white rounded-lg hover:bg-[#20b858] transition-all w-fit">
+                  <MessageCircle size={18} />Nous écrire sur WhatsApp
+                </a>
+              )}
             </div>
           </motion.div>
           <motion.div initial={{ opacity: 0, x: 20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}>
