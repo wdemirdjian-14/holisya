@@ -94,23 +94,24 @@ function OfferSlide({ s, i, total, progress }: { s: any; i: number; total: numbe
   const start = i * seg;
   const end = (i + 1) * seg;
 
-  let inp: number[]; let op: number[]; let ys: number[]; let sc: number[];
+  // Animation "page qui se tourne" : rotation 3D autour de l'axe vertical, pilotée au scroll.
+  let inp: number[]; let op: number[]; let rot: number[]; let sc: number[];
   if (total === 1) {
-    inp = [0, 1]; op = [1, 1]; ys = [0, 0]; sc = [1, 1];
+    inp = [0, 1]; op = [1, 1]; rot = [0, 0]; sc = [1, 1];
   } else if (i === 0) {
-    inp = [0, end - cf, end + cf]; op = [1, 1, 0]; ys = [0, 0, -60]; sc = [1, 1, 0.95];
+    inp = [0, end - cf, end + cf]; op = [1, 1, 0]; rot = [0, 0, -78]; sc = [1, 1, 0.92];
   } else if (i === total - 1) {
-    inp = [start - cf, start + cf, 1]; op = [0, 1, 1]; ys = [60, 0, 0]; sc = [0.95, 1, 1];
+    inp = [start - cf, start + cf, 1]; op = [0, 1, 1]; rot = [78, 0, 0]; sc = [0.92, 1, 1];
   } else {
-    inp = [start - cf, start + cf, end - cf, end + cf]; op = [0, 1, 1, 0]; ys = [60, 0, 0, -60]; sc = [0.95, 1, 1, 0.95];
+    inp = [start - cf, start + cf, end - cf, end + cf]; op = [0, 1, 1, 0]; rot = [78, 0, 0, -78]; sc = [0.92, 1, 1, 0.92];
   }
 
   const opacity = useTransform(progress, inp, op);
-  const y = useTransform(progress, inp, ys);
+  const rotateY = useTransform(progress, inp, rot);
   const scale = useTransform(progress, inp, sc);
 
   return (
-    <motion.div style={{ opacity, y, scale }} className="absolute inset-0 flex items-center justify-center px-4 sm:px-8">
+    <motion.div style={{ opacity, rotateY, scale, transformOrigin: 'center center' }} className="absolute inset-0 flex items-center justify-center px-4 sm:px-8 [backface-visibility:hidden]">
       <OfferContent s={s} reverse={i % 2 === 1} />
     </motion.div>
   );
@@ -165,7 +166,7 @@ export default function ServicesClient() {
     <>
       {Intro}
       <div ref={containerRef} className="relative bg-white" style={{ height: `${services.length * 62}vh` }}>
-        <div className="sticky top-0 h-screen overflow-hidden flex items-center">
+        <div className="sticky top-0 h-screen overflow-hidden flex items-center" style={{ perspective: '1800px' }}>
           {services.map((s: any, i: number) => (
             <OfferSlide key={i} s={s} i={i} total={services.length} progress={scrollYProgress} />
           ))}

@@ -6,6 +6,7 @@ import ContactWidget from '@/components/contact-widget';
 import MobileNav from '@/components/mobile-nav';
 import ServiceWorkerRegister from '@/components/service-worker-register';
 import LocalBusinessJsonLd from '@/components/local-business-jsonld';
+import ScrollFlower from '@/components/scroll-flower';
 
 export const dynamic = 'force-dynamic';
 
@@ -62,6 +63,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {children}
           </div>
           <ContactWidget />
+          <ScrollFlower />
           <MobileNav />
           <Toaster />
           <ChunkLoadErrorHandler />

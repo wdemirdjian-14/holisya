@@ -134,7 +134,7 @@ export default function HomeClient({ galleryPhotos = [], latestPosts = [], conte
             {services.map((s: any, i: number) => {
               const Icon = s.icon;
               return (
-                <motion.div key={i} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
+                <motion.div key={i} initial={{ opacity: 0, rotateY: -48 }} whileInView={{ opacity: 1, rotateY: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ delay: i * 0.12, duration: 0.7, ease: [0.22, 1, 0.36, 1] }} style={{ transformPerspective: 1000, transformOrigin: 'left center' }}>
                   <Link href={s.href} className="group block bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
                     <div className="relative aspect-[4/3] bg-[#F8F4EF]">
                       <Image src={s.img} alt={s.title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
@@ -165,7 +165,7 @@ export default function HomeClient({ galleryPhotos = [], latestPosts = [], conte
             </motion.div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {latestPosts.map((post: any, i: number) => (
-                <motion.div key={post.id} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
+                <motion.div key={post.id} initial={{ opacity: 0, rotateY: -48 }} whileInView={{ opacity: 1, rotateY: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ delay: i * 0.12, duration: 0.7, ease: [0.22, 1, 0.36, 1] }} style={{ transformPerspective: 1000, transformOrigin: 'left center' }}>
                   <Link href={`/blog/${post.slug}`} className="group block bg-[#F8F4EF] rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
                     {post.imageUrl && (
                       <div className="relative aspect-[4/3] bg-white">
@@ -194,7 +194,7 @@ export default function HomeClient({ galleryPhotos = [], latestPosts = [], conte
       {/* CTA Carte Cadeau */}
       <section className="py-20 bg-white">
         <div className="max-w-[1200px] mx-auto px-4">
-          <div className="relative bg-[#3B312D] rounded-2xl overflow-hidden">
+          <motion.div initial={{ opacity: 0, rotateY: -32 }} whileInView={{ opacity: 1, rotateY: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }} style={{ transformPerspective: 1400, transformOrigin: 'left center' }} className="relative bg-[#3B312D] rounded-2xl overflow-hidden">
             <div className="absolute inset-0 opacity-20">
               <Image src="/images/ambiance.jpg" alt="Ambiance spa" fill className="object-cover" />
             </div>
@@ -211,7 +211,7 @@ export default function HomeClient({ galleryPhotos = [], latestPosts = [], conte
                 <Image src="/images/gift-card.jpg" alt="Cartes cadeaux Holisya" fill className="object-cover" />
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </section>
 
