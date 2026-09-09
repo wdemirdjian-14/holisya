@@ -37,7 +37,7 @@ export async function generateMetadata() {
     icons: {
       icon: '/favicon.ico',
       shortcut: '/favicon.ico',
-      apple: '/icons/icon-192.png',
+      apple: '/icons/apple-touch-icon.png',
     },
     openGraph: {
       title: 'Holisya | Massage Kobido & bien-être à Boulogne-Billancourt et Paris',
