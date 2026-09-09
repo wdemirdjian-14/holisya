@@ -81,7 +81,7 @@ export default function ServicesClient() {
                 className={`flex flex-col ${isEven ? 'md:flex-row' : 'md:flex-row-reverse'} gap-8 md:gap-12 items-center`}>
                 <div className="w-full md:w-1/2">
                   <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-[#F8F4EF]">
-                    {s?.imageUrl && <Image src={s.imageUrl} alt={s?.name ?? 'Soin'} fill className="object-cover" />}
+                    <Image src={s?.imageUrl || '/uploads/_placeholder-soin.jpg'} alt={s?.name ?? 'Soin'} fill className="object-cover" />
                   </div>
                 </div>
                 <div className="w-full md:w-1/2">

@@ -30,7 +30,7 @@ export default function BlogClient({ posts }: { posts: any[] }) {
                 <motion.div key={post?.id ?? i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
                   <Link href={`/blog/${post?.slug ?? ''}`} className="group block bg-[#F8F4EF] rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all">
                     <div className="relative aspect-video bg-[#F8F4EF]">
-                      <Image src={post?.imageUrl || 'https://cdn.abacus.ai/images/9f0a8b4c-cfa2-455b-934e-f02b1827e7a2.png'} alt={post?.title ?? 'Article'} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
+                      <Image src={post?.imageUrl || '/uploads/_placeholder-soin.jpg'} alt={post?.title ?? 'Article'} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
                     </div>
                     <div className="p-5">
                       {post?.category && <span className="text-xs font-medium text-[#AAB7A0] uppercase tracking-wider">{post.category}</span>}

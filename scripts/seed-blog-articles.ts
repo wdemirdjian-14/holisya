@@ -639,6 +639,9 @@ async function main() {
 
     await prisma.blogPost.upsert({
       where: { slug: article.slug },
+      // NB : on ne touche pas à `imageUrl` — les images sont gérées par
+      // scripts/assign-blog-images.cjs (et par l'admin en drag-drop). Un re-seed
+      // ne doit donc pas les écraser.
       update: {
         title: article.title,
         excerpt: article.excerpt,
@@ -646,7 +649,6 @@ async function main() {
         category: article.category,
         tags: article.tags,
         authorName,
-        imageUrl: '',
         isPublished: true,
         publishedAt,
       },
@@ -658,7 +660,6 @@ async function main() {
         category: article.category,
         tags: article.tags,
         authorName,
-        imageUrl: '',
         isPublished: true,
         publishedAt,
       },
