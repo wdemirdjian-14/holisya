@@ -640,6 +640,18 @@ export default function AdminDashboard() {
           <div className="relative mb-6"><Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#3B312D]/30" />
             <input type="text" value={giftCardSearch} onChange={(e: any) => setGiftCardSearch(e.target?.value ?? '')} placeholder="Rechercher par code, destinataire ou email acheteur..."
               className="w-full pl-10 pr-4 py-3 text-sm border border-white rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#C98F79]/30 shadow-sm text-[#3B312D]" /></div>
+          {(() => {
+            const valid = (giftCards ?? []).filter((g: any) => (g?.status === 'ACTIVE' || g?.status === 'PARTIALLY_USED') && (!g?.expiresAt || new Date(g.expiresAt) > new Date()));
+            const init = valid.reduce((s: number, g: any) => s + (g?.amount ?? 0), 0);
+            const rem = valid.reduce((s: number, g: any) => s + (g?.remainingAmount ?? 0), 0);
+            return (
+              <div className="grid grid-cols-3 gap-3 mb-6">
+                <div className="bg-white rounded-xl p-4 shadow-sm text-center"><p className="font-playfair text-2xl font-bold text-[#3B312D]">{valid.length}</p><p className="text-xs text-[#3B312D]/60 mt-1">Cartes valides</p></div>
+                <div className="bg-white rounded-xl p-4 shadow-sm text-center"><p className="font-playfair text-2xl font-bold text-[#AAB7A0]">{init}€</p><p className="text-xs text-[#3B312D]/60 mt-1">Montant initial</p></div>
+                <div className="bg-white rounded-xl p-4 shadow-sm text-center"><p className="font-playfair text-2xl font-bold text-[#C98F79]">{rem}€</p><p className="text-xs text-[#3B312D]/60 mt-1">Encours à consommer</p></div>
+              </div>
+            );
+          })()}
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -981,7 +993,7 @@ export default function AdminDashboard() {
                   {modalData?.paymentMethod && (
                     <div className="flex justify-between py-2 border-t border-[#F8F4EF]">
                       <span className="text-sm text-[#3B312D]/60">Mode d'encaissement</span>
-                      <span className="text-sm text-[#3B312D]">{modalData.paymentMethod === 'CASH' ? 'Espèces' : modalData.paymentMethod === 'CARD' ? 'Carte bleue' : 'Carte cadeau'}</span>
+                      <span className="text-sm text-[#3B312D]">{modalData.paymentMethod === 'CASH' ? 'Espèces' : modalData.paymentMethod === 'CARD' ? 'Carte bleue' : modalData.paymentMethod === 'OFFERT' ? 'Offerte (non encaissée)' : 'Carte cadeau'}</span>
                     </div>
                   )}
                 </div>
@@ -1014,9 +1026,10 @@ export default function AdminDashboard() {
                 <div className="grid grid-cols-2 gap-4">
                   <div><label className="text-sm font-medium text-[#3B312D]/70">Montant (€)</label>
                     <input type="number" min={1} step="0.01" value={modalData?.amount ?? 50} onChange={(e: any) => setModalData({...(modalData ?? {}), amount: e.target?.value ?? '50'})} className="w-full mt-1 px-4 py-3 text-sm border border-[#F8F4EF] rounded-lg bg-[#F8F4EF]/50 text-[#3B312D]" /></div>
-                  <div><label className="text-sm font-medium text-[#3B312D]/70">Mode d'encaissement</label>
+                  <div><label className="text-sm font-medium text-[#3B312D]/70">Encaissement</label>
                     <select value={modalData?.paymentMethod ?? 'CASH'} onChange={(e: any) => setModalData({...(modalData ?? {}), paymentMethod: e.target?.value ?? 'CASH'})} className="w-full mt-1 px-4 py-3 text-sm border border-[#F8F4EF] rounded-lg bg-[#F8F4EF]/50 text-[#3B312D]">
-                      <option value="CASH">Espèces</option><option value="CARD">Carte bleue</option><option value="GIFT_CARD">Carte cadeau</option></select></div>
+                      <option value="CASH">Espèces</option><option value="CARD">Carte bleue</option><option value="GIFT_CARD">Carte cadeau</option><option value="OFFERT">Offerte (ne pas encaisser)</option></select>
+                    <p className="text-xs text-[#3B312D]/45 mt-1">Si un email destinataire est renseigné, la jolie carte lui est envoyée automatiquement.</p></div>
                 </div>
                 <div><label className="text-sm font-medium text-[#3B312D]/70">Nom destinataire (optionnel)</label>
                   <input value={modalData?.recipientName ?? ''} onChange={(e: any) => setModalData({...(modalData ?? {}), recipientName: e.target?.value ?? ''})} className="w-full mt-1 px-4 py-3 text-sm border border-[#F8F4EF] rounded-lg bg-[#F8F4EF]/50 text-[#3B312D]" /></div>

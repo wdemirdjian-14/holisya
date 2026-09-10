@@ -26,6 +26,21 @@ export default function MemberDashboard() {
   const [newMood, setNewMood] = useState(4);
   const [newNote, setNewNote] = useState('');
   const [savingEntry, setSavingEntry] = useState(false);
+  const [assocCode, setAssocCode] = useState('');
+  const [assocLoading, setAssocLoading] = useState(false);
+
+  const associateCard = async () => {
+    const code = assocCode.trim();
+    if (!code) return;
+    setAssocLoading(true);
+    try {
+      const res = await fetch('/api/member/gift-cards/associate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) });
+      const d = await res.json();
+      if (res.ok) { toast.success(d?.alreadyLinked ? 'Cette carte est déjà dans votre compte' : 'Carte cadeau associée !'); setAssocCode(''); loadData(); }
+      else toast.error(d?.error ?? 'Erreur');
+    } catch { toast.error('Erreur'); }
+    setAssocLoading(false);
+  };
 
   useEffect(() => {
     if (status === 'unauthenticated') router.replace('/connexion');
@@ -221,9 +236,21 @@ export default function MemberDashboard() {
       </div>
 
       {/* Gift Cards */}
-      {(giftCards ?? []).length > 0 && (
-        <div className="mt-8">
-          <h2 className="font-playfair text-xl font-semibold text-[#3B312D] mb-4">Mes cartes cadeaux</h2>
+      <div className="mt-8">
+        <h2 className="font-playfair text-xl font-semibold text-[#3B312D] mb-4">Mes cartes cadeaux</h2>
+        <div className="bg-white rounded-xl p-4 shadow-sm mb-3">
+          <p className="text-sm text-[#3B312D]/70 mb-2">Vous avez reçu une carte cadeau ? Ajoutez-la à votre compte pour suivre son solde.</p>
+          <div className="flex gap-2 flex-wrap">
+            <input value={assocCode} onChange={(e: any) => setAssocCode(e.target?.value ?? '')} placeholder="Code (ex. HOLISYA-XXXXXX-2026)"
+              className="flex-1 min-w-[180px] px-3 py-2 text-sm border border-[#F8F4EF] rounded-lg bg-[#F8F4EF]/50 text-[#3B312D] focus:outline-none focus:ring-2 focus:ring-[#C98F79]/30" />
+            <button onClick={associateCard} disabled={assocLoading || !assocCode.trim()} className="px-4 py-2 bg-[#C98F79] text-white text-sm rounded-lg disabled:opacity-50 flex items-center gap-2">
+              {assocLoading ? <Loader2 size={14} className="animate-spin" /> : <Gift size={14} />}Associer
+            </button>
+          </div>
+        </div>
+        {(giftCards ?? []).length === 0 ? (
+          <p className="text-sm text-[#3B312D]/40">Aucune carte cadeau pour l'instant.</p>
+        ) : (
           <div className="space-y-3">
             {giftCards.map((gc: any) => (
               <div key={gc?.id ?? ''} className="bg-white rounded-xl p-4 shadow-sm flex items-center justify-between flex-wrap gap-3">
@@ -238,8 +265,8 @@ export default function MemberDashboard() {
               </div>
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Journal bien-être */}
       <div className="mt-8 bg-white rounded-xl p-6 shadow-sm">

@@ -5,6 +5,8 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { findOrCreateUserByEmail } from '@/lib/user-invite';
 import { deductGiftCardBalance } from '@/lib/gift-card';
+import { sendNotificationEmail } from '@/lib/notifications';
+import { giftCardEmail } from '@/lib/emails';
 
 function generateGiftCardCode(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -21,7 +23,8 @@ export async function POST(req: NextRequest) {
     const data = await req.json();
     const amount = parseFloat(data?.amount ?? '0');
     if (!data?.purchaserEmail || !amount || amount <= 0) return NextResponse.json({ error: 'Email acheteur et montant requis' }, { status: 400 });
-    if (!['CASH', 'CARD', 'GIFT_CARD'].includes(data?.paymentMethod)) return NextResponse.json({ error: 'Mode d\'encaissement invalide' }, { status: 400 });
+    // OFFERT = carte offerte par l'institut (ne pas encaisser)
+    if (!['CASH', 'CARD', 'GIFT_CARD', 'OFFERT'].includes(data?.paymentMethod)) return NextResponse.json({ error: 'Mode d\'encaissement invalide' }, { status: 400 });
 
     const { user } = await findOrCreateUserByEmail({
       email: data.purchaserEmail,
@@ -29,20 +32,48 @@ export async function POST(req: NextRequest) {
       lastName: data?.purchaserLastName ?? '',
     });
 
+    // Validité 6 mois
+    const expiresAt = new Date();
+    expiresAt.setMonth(expiresAt.getMonth() + 6);
+
+    // Si le destinataire a déjà un compte, on lui associe la carte automatiquement.
+    let receivedById: string | undefined;
+    const recipientEmail = (data?.recipientEmail ?? '').trim();
+    if (recipientEmail) {
+      const existing = await prisma.user.findUnique({ where: { email: recipientEmail.toLowerCase() }, select: { id: true } }).catch(() => null);
+      if (existing) receivedById = existing.id;
+    }
+
     const giftCard = await prisma.giftCard.create({
       data: {
         code: generateGiftCardCode(),
         amount,
         remainingAmount: amount,
         purchasedById: user.id,
+        receivedById,
         recipientName: data?.recipientName ?? '',
-        recipientEmail: data?.recipientEmail ?? '',
+        recipientEmail,
         personalMessage: data?.personalMessage ?? '',
         careType: data?.careType ?? '',
         paymentMethod: data.paymentMethod,
-        expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+        expiresAt,
       },
     });
+
+    // Envoi de la jolie carte au destinataire si un email est fourni.
+    if (recipientEmail) {
+      await sendNotificationEmail({
+        subject: 'Vous avez reçu une carte cadeau Holisya 🎁',
+        recipientEmail,
+        replyTo: 'contact@holisya.fr',
+        body: giftCardEmail({
+          recipientName: giftCard.recipientName,
+          amount, code: giftCard.code, expiresAt,
+          personalMessage: giftCard.personalMessage,
+        }),
+      }).catch((e) => console.error('gift card email error', e));
+    }
+
     return NextResponse.json({ giftCard });
   } catch (error: any) {
     console.error('Create gift card error:', error);
