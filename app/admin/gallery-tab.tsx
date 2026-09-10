@@ -2,12 +2,30 @@
 import { useEffect, useState } from 'react';
 import { Plus, Trash2, Loader2, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
+import dynamic from 'next/dynamic';
+import { imageAspect, isCroppable } from '@/lib/image-crop-utils';
+
+const ImageCropModal = dynamic(() => import('@/components/image-crop-modal'), { ssr: false });
 
 export default function GalleryTab() {
   const [photos, setPhotos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [cropReq, setCropReq] = useState<{ file: File; onDone: (f: File) => void } | null>(null);
+
+  // Photo unitaire au mauvais format -> recadrage carré ; sinon envoi direct (y compris multi).
+  const handleSelect = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const arr = Array.from(files);
+    if (arr.length === 1 && isCroppable(arr[0])) {
+      try {
+        const a = await imageAspect(arr[0]);
+        if (a && Math.abs(a - 1) > 0.08) { setCropReq({ file: arr[0], onDone: (f) => upload([f]) }); return; }
+      } catch {}
+    }
+    upload(files);
+  };
 
   const load = () => {
     setLoading(true);
@@ -16,7 +34,7 @@ export default function GalleryTab() {
 
   useEffect(() => { load(); }, []);
 
-  const upload = async (files: FileList | null) => {
+  const upload = async (files: File[] | FileList | null) => {
     if (!files || files.length === 0) return;
     setUploading(true);
     try {
@@ -51,7 +69,7 @@ export default function GalleryTab() {
         </div>
         <label className={`px-4 py-2 bg-[#C98F79] text-white text-sm rounded-lg flex items-center gap-2 cursor-pointer ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
           <Plus size={14} />{uploading ? 'Import...' : 'Importer des photos'}
-          <input type="file" accept="image/*,.heic,.heif" multiple className="hidden" disabled={uploading} onChange={(e: any) => upload(e.target?.files)} />
+          <input type="file" accept="image/*,.heic,.heif" multiple className="hidden" disabled={uploading} onChange={(e: any) => handleSelect(e.target?.files)} />
         </label>
       </div>
 
@@ -59,12 +77,12 @@ export default function GalleryTab() {
       <label
         onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
-        onDrop={(e) => { e.preventDefault(); setDragging(false); upload(e.dataTransfer.files); }}
+        onDrop={(e) => { e.preventDefault(); setDragging(false); handleSelect(e.dataTransfer.files); }}
         className={`mb-6 flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-xl py-8 cursor-pointer transition-colors ${dragging ? 'border-[#C98F79] bg-[#C98F79]/5' : 'border-[#3B312D]/15 hover:border-[#C98F79]/50'} ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
         {uploading ? <Loader2 size={22} className="animate-spin text-[#C98F79]" /> : <ImageIcon size={22} className="text-[#C98F79]" />}
         <p className="text-sm text-[#3B312D]/70">{uploading ? 'Import en cours…' : 'Glissez vos photos ici, ou cliquez pour les choisir'}</p>
         <p className="text-xs text-[#3B312D]/40">JPEG, PNG, HEIC (iPhone)… converties automatiquement</p>
-        <input type="file" accept="image/*,.heic,.heif" multiple className="hidden" disabled={uploading} onChange={(e: any) => upload(e.target?.files)} />
+        <input type="file" accept="image/*,.heic,.heif" multiple className="hidden" disabled={uploading} onChange={(e: any) => handleSelect(e.target?.files)} />
       </label>
 
       {photos.length === 0 ? (
@@ -88,6 +106,15 @@ export default function GalleryTab() {
             </div>
           ))}
         </div>
+      )}
+
+      {cropReq && (
+        <ImageCropModal
+          file={cropReq.file}
+          aspect={1}
+          onCancel={() => setCropReq(null)}
+          onCropped={(f) => { const req = cropReq; setCropReq(null); req.onDone(f); }}
+        />
       )}
     </div>
   );

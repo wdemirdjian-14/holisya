@@ -9,6 +9,7 @@ import dynamic from 'next/dynamic';
 import ClientPicker from './client-picker';
 import GiftCardPicker from './giftcard-picker';
 import RichTextEditor from './rich-text-editor';
+import { imageAspect, isCroppable } from '@/lib/image-crop-utils';
 
 const AdminCharts = dynamic(() => import('./admin-charts'), { ssr: false, loading: () => <div className="h-64 bg-white rounded-xl animate-pulse" /> });
 const EmailsTab = dynamic(() => import('./emails-tab'), { ssr: false, loading: () => <div className="h-64 bg-white rounded-xl animate-pulse" /> });
@@ -21,6 +22,7 @@ const BookingTab = dynamic(() => import('./booking-tab'), { ssr: false, loading:
 const SiteContentTab = dynamic(() => import('./site-content-tab'), { ssr: false, loading: () => <div className="h-64 bg-white rounded-xl animate-pulse" /> });
 const AgendaCalendar = dynamic(() => import('./agenda-calendar'), { ssr: false, loading: () => <div className="h-64 bg-white rounded-xl animate-pulse" /> });
 const SubscriptionsToggle = dynamic(() => import('./subscriptions-toggle'), { ssr: false });
+const ImageCropModal = dynamic(() => import('@/components/image-crop-modal'), { ssr: false });
 
 const GIFT_CARD_STATUS_LABEL: Record<string, string> = { ACTIVE: 'Active', USED: 'Utilisée', PARTIALLY_USED: 'Partiellement utilisée', EXPIRED: 'Expirée' };
 const GIFT_CARD_STATUS_COLOR: Record<string, string> = {
@@ -151,6 +153,20 @@ export default function AdminDashboard() {
       if (res.ok) { const d = await res.json(); toast.success(`Crédits mis à jour: ${d.credits}`); refreshData(); setShowModal(null); }
       else toast.error('Erreur');
     } catch { toast.error('Erreur'); }
+  };
+
+  const [cropReq, setCropReq] = useState<{ file: File; aspect: number; onDone: (f: File) => void } | null>(null);
+
+  // Ouvre le recadrage si le format de la photo ne correspond pas au cadre (sinon upload direct).
+  const maybeCrop = async (file: File | undefined, aspect: number, onDone: (f: File) => void) => {
+    if (!file) return;
+    if (isCroppable(file)) {
+      try {
+        const a = await imageAspect(file);
+        if (a && Math.abs(a - aspect) / aspect > 0.08) { setCropReq({ file, aspect, onDone }); return; }
+      } catch {}
+    }
+    onDone(file);
   };
 
   const uploadServicePhoto = async (serviceId: string, file: File | undefined) => {
@@ -1131,7 +1147,7 @@ export default function AdminDashboard() {
                       <ImageIcon size={14} className="text-[#C98F79]" />
                       {uploadingPhoto ? 'Envoi...' : 'Importer une photo'}
                       <input type="file" accept="image/*,.heic,.heif" className="hidden" disabled={!modalData?.id || uploadingPhoto}
-                        onChange={(e: any) => uploadBlogPhoto(modalData?.id, e.target?.files?.[0])} />
+                        onChange={(e: any) => maybeCrop(e.target?.files?.[0], 4 / 3, (f) => uploadBlogPhoto(modalData?.id, f))} />
                     </label>
                     {!modalData?.id && <span className="text-xs text-[#3B312D]/40">Enregistrez l'article avant d'ajouter une photo</span>}
                   </div>
@@ -1208,13 +1224,13 @@ export default function AdminDashboard() {
                   )}
                   <label
                     onDragOver={(e) => { if (modalData?.id) { e.preventDefault(); } }}
-                    onDrop={(e) => { if (modalData?.id && !uploadingPhoto) { e.preventDefault(); uploadServicePhoto(modalData?.id, e.dataTransfer.files?.[0]); } }}
+                    onDrop={(e) => { if (modalData?.id && !uploadingPhoto) { e.preventDefault(); maybeCrop(e.dataTransfer.files?.[0], 4 / 3, (f) => uploadServicePhoto(modalData?.id, f)); } }}
                     className={`mt-2 flex flex-col items-center justify-center gap-1 border-2 border-dashed rounded-lg py-5 cursor-pointer transition-colors ${!modalData?.id ? 'opacity-40 pointer-events-none border-[#3B312D]/15' : 'border-[#3B312D]/15 hover:border-[#C98F79]/50'}`}>
                     <ImageIcon size={18} className="text-[#C98F79]" />
                     <span className="text-sm text-[#3B312D]/70">{uploadingPhoto ? 'Envoi…' : 'Glissez une photo ici, ou cliquez'}</span>
                     <span className="text-[10px] text-[#3B312D]/40">JPEG, PNG, HEIC (iPhone)… converties automatiquement</span>
                     <input type="file" accept="image/*,.heic,.heif" className="hidden" disabled={!modalData?.id || uploadingPhoto}
-                      onChange={(e: any) => uploadServicePhoto(modalData?.id, e.target?.files?.[0])} />
+                      onChange={(e: any) => maybeCrop(e.target?.files?.[0], 4 / 3, (f) => uploadServicePhoto(modalData?.id, f))} />
                   </label>
                   {!modalData?.id && <span className="text-xs text-[#3B312D]/40 mt-1 inline-block">Enregistrez le service avant d'ajouter une photo</span>}
                 </div>
@@ -1249,6 +1265,15 @@ export default function AdminDashboard() {
             )}
           </div>
         </div>
+      )}
+
+      {cropReq && (
+        <ImageCropModal
+          file={cropReq.file}
+          aspect={cropReq.aspect}
+          onCancel={() => setCropReq(null)}
+          onCropped={(f) => { const req = cropReq; setCropReq(null); req.onDone(f); }}
+        />
       )}
     </div>
   );
