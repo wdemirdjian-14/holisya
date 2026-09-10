@@ -2,7 +2,7 @@
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { User, Calendar, CreditCard, Gift, ArrowRight, Crown, Send, Loader2, RefreshCw, Play, Award, Share2, Copy, Smile, Trash2 } from 'lucide-react';
+import { User, Calendar, CreditCard, Gift, ArrowRight, Send, Loader2, RefreshCw, Play, Award, Share2, Copy, Smile, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -121,7 +121,7 @@ export default function MemberDashboard() {
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
           className="bg-white rounded-xl p-5 shadow-sm">
           <CreditCard size={20} className="text-[#C98F79]" />
@@ -138,11 +138,6 @@ export default function MemberDashboard() {
           <Gift size={20} className="text-[#C98F79]" />
           <p className="font-playfair text-2xl font-bold text-[#3B312D] mt-2">{giftCards?.length ?? 0}</p>
           <p className="text-sm text-[#3B312D]/60">Cartes cadeaux</p>
-        </motion.div>
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="bg-white rounded-xl p-5 shadow-sm">
-          <Crown size={20} className="text-[#AAB7A0]" />
-          <p className="font-playfair text-2xl font-bold text-[#3B312D] mt-2">{subscriptions?.filter((s: any) => s?.status === 'ACTIVE')?.length ?? 0}</p>
-          <p className="text-sm text-[#3B312D]/60">Abonnements actifs</p>
         </motion.div>
       </div>
 
@@ -296,7 +291,7 @@ export default function MemberDashboard() {
       </Link>
 
       {/* Quick Links */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8">
         <Link href="/espace-membre/profil" className="bg-white rounded-xl p-5 shadow-sm hover:shadow-md transition-all group">
           <User size={20} className="text-[#C98F79]" />
           <p className="font-medium text-[#3B312D] mt-2">Mon Profil</p>
@@ -306,11 +301,6 @@ export default function MemberDashboard() {
           <Gift size={20} className="text-[#C98F79]" />
           <p className="font-medium text-[#3B312D] mt-2">Cartes Cadeaux</p>
           <p className="text-xs text-[#3B312D]/60 mt-1">Offrir un soin</p>
-        </Link>
-        <Link href="/abonnements" className="bg-white rounded-xl p-5 shadow-sm hover:shadow-md transition-all group">
-          <Crown size={20} className="text-[#C98F79]" />
-          <p className="font-medium text-[#3B312D] mt-2">Abonnements</p>
-          <p className="text-xs text-[#3B312D]/60 mt-1">Voir les formules</p>
         </Link>
       </div>
     </div>

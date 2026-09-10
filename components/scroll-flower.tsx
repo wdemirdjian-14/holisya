@@ -25,7 +25,7 @@ export default function ScrollFlower() {
   const rotate = useTransform(p, [0, 1], [0, 540]);
 
   return (
-    <div className="fixed inset-x-0 bottom-16 lg:bottom-0 z-30 pointer-events-none">
+    <div className="fixed inset-x-0 bottom-[calc(4rem_+_env(safe-area-inset-bottom))] lg:bottom-0 z-30 pointer-events-none">
       <div className="relative h-[3px] bg-[#3B312D]/10">
         <motion.div style={{ scaleX: p }} className="absolute inset-0 origin-left bg-gradient-to-r from-[#C98F79] via-[#D6A491] to-[#AAB7A0]" />
         <motion.div style={{ left }} className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2">
