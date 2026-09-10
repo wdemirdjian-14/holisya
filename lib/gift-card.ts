@@ -1,4 +1,6 @@
 import { prisma } from '@/lib/db';
+import { sendNotificationEmail } from '@/lib/notifications';
+import { giftCardRedeemedEmail } from '@/lib/emails';
 
 export async function deductGiftCardBalance(opts: { id?: string; code?: string; amount: number }) {
   if (!opts.id && !opts.code) throw new Error('Carte cadeau requise');
@@ -16,5 +18,24 @@ export async function deductGiftCardBalance(opts: { id?: string; code?: string; 
   const newRemaining = Math.round((giftCard.remainingAmount - opts.amount) * 100) / 100;
   const newStatus = newRemaining <= 0 ? 'USED' : 'PARTIALLY_USED';
 
-  return prisma.giftCard.update({ where: { id: giftCard.id }, data: { remainingAmount: newRemaining, status: newStatus } });
+  const updated = await prisma.giftCard.update({ where: { id: giftCard.id }, data: { remainingAmount: newRemaining, status: newStatus } });
+
+  // Email confirmant l'encaissement de la carte cadeau.
+  try {
+    let to = giftCard.recipientEmail;
+    if (!to && giftCard.purchasedById) {
+      const buyer = await prisma.user.findUnique({ where: { id: giftCard.purchasedById }, select: { email: true } });
+      to = buyer?.email ?? '';
+    }
+    if (to) {
+      await sendNotificationEmail({
+        subject: 'Votre carte cadeau Holisya a été utilisée',
+        recipientEmail: to,
+        replyTo: 'contact@holisya.fr',
+        body: giftCardRedeemedEmail({ amount: opts.amount, code: giftCard.code, remaining: newRemaining }),
+      });
+    }
+  } catch (e) { console.error('gift card redeemed email error', e); }
+
+  return updated;
 }

@@ -12,6 +12,11 @@ export const SITE_URL = (process.env.NEXTAUTH_URL ?? 'https://www.holisya.fr').r
 export const BUSINESS = {
   name: 'Holisya',
   slogan: 'Bien-être holistique féminin',
+  practitioner: 'Lamyae',
+  // Lien pour laisser un avis Google (ouvre la fiche via son CID).
+  // Remplaçable par le lien direct "Demander des avis" de Google Business Profile
+  // (format https://g.page/r/<code>/review) pour ouvrir directement le dialogue d'avis.
+  googleReviewUrl: 'https://www.google.com/maps?cid=17800064334613137990',
 
   // --- Localisation (institut à Boulogne-Billancourt) ---
   streetAddress: '66 Boulevard Jean Jaurès',

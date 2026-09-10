@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db';
 import { stripe } from '@/lib/stripe';
 import { sendNotificationEmail } from '@/lib/notifications';
 import { notifyAdmins } from '@/lib/notify';
-import crypto from 'crypto';
+import { giftCardEmail } from '@/lib/emails';
 
 function generateGiftCardCode(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -28,6 +28,9 @@ export async function POST(request: Request) {
 
     const code = generateGiftCardCode();
     const amount = parseFloat(meta.amount ?? '0');
+    // Validité 6 mois
+    const expiresAt = new Date();
+    expiresAt.setMonth(expiresAt.getMonth() + 6);
 
     const giftCard = await prisma.giftCard.create({
       data: {
@@ -36,9 +39,23 @@ export async function POST(request: Request) {
         recipientName: meta.recipientName ?? '', personalMessage: meta.personalMessage ?? '',
         careType: meta.careType ?? '', stripePaymentId: sessionId,
         promoCodeUsed: meta.promoCode ?? '',
-        expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+        expiresAt,
       },
     });
+
+    // Jolie carte cadeau envoyée au destinataire (montant, validité 6 mois, message personnalisé)
+    if (giftCard.recipientEmail) {
+      await sendNotificationEmail({
+        subject: 'Vous avez reçu une carte cadeau Holisya 🎁',
+        recipientEmail: giftCard.recipientEmail,
+        replyTo: 'contact@holisya.fr',
+        body: giftCardEmail({
+          recipientName: giftCard.recipientName,
+          amount, code, expiresAt,
+          personalMessage: giftCard.personalMessage,
+        }),
+      });
+    }
 
     if (meta.promoCode) {
       await prisma.discountCode.update({ where: { code: meta.promoCode }, data: { currentUses: { increment: 1 } } }).catch(() => {});

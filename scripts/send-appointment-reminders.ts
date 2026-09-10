@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import nodemailer from 'nodemailer';
 import webpush from 'web-push';
+import { emailShell, appointmentActions } from '../lib/emails';
 
 const prisma = new PrismaClient();
 
@@ -17,16 +18,13 @@ if (pushReady) {
 }
 
 function body(firstName: string, service: string, when: string) {
-  return `<div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #F8F4EF; padding: 40px 30px;">
-    <h1 style="color: #3B312D; text-align: center; font-size: 24px;">Rappel de rendez-vous 🌸</h1>
-    <div style="background: white; padding: 30px; border-radius: 12px;">
-      <p style="color: #3B312D;">Bonjour ${firstName || ''},</p>
-      <p style="color: #3B312D;">Nous avons hâte de vous accueillir pour votre soin${service ? ` « ${service} »` : ''} :</p>
-      <p style="color: #C98F79; font-weight: bold; font-size: 18px; text-align:center;">${when}</p>
-      <p style="color: #666; font-size: 13px;">Un empêchement ? Prévenez-nous depuis votre espace client ou par téléphone.</p>
-    </div>
-    <p style="text-align: center; color: #999; font-size: 12px; margin-top: 24px;">Holisya — Bien-être Holistique Féminin</p>
-  </div>`;
+  const inner = `
+    <p style="color:#3B312D;">Bonjour ${firstName || ''},</p>
+    <p style="color:#3B312D;">Nous avons hâte de vous accueillir pour votre soin${service ? ` « ${service} »` : ''} :</p>
+    <p style="color:#b87d68;font-weight:bold;font-size:18px;text-align:center;margin:14px 0;">${when}</p>
+    <p style="color:#8b807a;font-size:13px;">Un empêchement ? Vous pouvez modifier ou annuler ci-dessous.</p>
+    ${appointmentActions()}`;
+  return emailShell('Rappel de rendez-vous 🌸', inner, { showContact: true });
 }
 
 async function main() {
@@ -48,6 +46,7 @@ async function main() {
         await transporter.sendMail({
           from: process.env.SMTP_FROM ?? '"Holisya" <contact@holisya.fr>',
           to: appt.user.email,
+          replyTo: 'contact@holisya.fr',
           subject: 'Rappel : votre rendez-vous chez Holisya 🌸',
           html: body(appt.user.firstName ?? '', appt.serviceType ?? '', when),
         });

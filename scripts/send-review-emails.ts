@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import nodemailer from 'nodemailer';
-import crypto from 'crypto';
+import { thankYouReviewEmail } from '../lib/emails';
 
 const prisma = new PrismaClient();
 
@@ -11,21 +11,7 @@ const transporter = nodemailer.createTransport({
   auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD },
 });
 
-function emailBody(firstName: string, link: string, service: string) {
-  return `<div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #F8F4EF; padding: 40px 30px;">
-    <h1 style="color: #3B312D; text-align: center; font-size: 24px;">Votre avis compte 🌸</h1>
-    <div style="background: white; padding: 30px; border-radius: 12px;">
-      <p style="color: #3B312D;">Bonjour ${firstName || ''},</p>
-      <p style="color: #3B312D;">Nous espérons que vous avez profité de votre soin${service ? ` « ${service} »` : ''} chez Holisya.</p>
-      <p style="color: #3B312D;">Votre ressenti nous aide à vous offrir des rituels toujours plus adaptés. Prendriez-vous un instant pour nous le partager ?</p>
-      <div style="text-align: center; margin: 25px 0;"><a href="${link}" style="background: #C98F79; color: white; padding: 14px 30px; border-radius: 8px; text-decoration: none; font-weight: bold;">Donner mon avis</a></div>
-    </div>
-    <p style="text-align: center; color: #999; font-size: 12px; margin-top: 24px;">Holisya — Approche holistique du bien-être féminin</p>
-  </div>`;
-}
-
 async function main() {
-  const appUrl = process.env.NEXTAUTH_URL ?? '';
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
   const appts = await prisma.appointment.findMany({
@@ -40,14 +26,14 @@ async function main() {
       await prisma.appointment.update({ where: { id: appt.id }, data: { reviewEmailSent: true } });
       continue;
     }
-    const token = crypto.randomBytes(20).toString('hex');
-    await prisma.appointment.update({ where: { id: appt.id }, data: { reviewToken: token, reviewEmailSent: true } });
+    await prisma.appointment.update({ where: { id: appt.id }, data: { reviewEmailSent: true } });
     try {
       await transporter.sendMail({
         from: process.env.SMTP_FROM ?? '"Holisya" <contact@holisya.fr>',
         to: email,
-        subject: 'Comment s\'est passé votre soin ? 🌸',
-        html: emailBody(appt.user?.firstName ?? '', `${appUrl}/avis?t=${token}`, appt.serviceType ?? ''),
+        replyTo: 'contact@holisya.fr',
+        subject: 'Merci pour votre visite 🌸',
+        html: thankYouReviewEmail({ firstName: appt.user?.firstName ?? '', serviceType: appt.serviceType ?? '' }),
       });
       sent += 1;
     } catch (e) {
