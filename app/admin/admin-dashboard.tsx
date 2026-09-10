@@ -323,6 +323,36 @@ export default function AdminDashboard() {
     setSaving(false);
   };
 
+  const [gcAmount, setGcAmount] = useState('');
+
+  const resendGiftCard = async (id: string) => {
+    setSaving(true);
+    try {
+      const res = await fetch('/api/admin/giftcards', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, action: 'resend' }) });
+      const data = await res.json();
+      if (res.ok) toast.success(data?.sent ? `Carte renvoyée à ${data?.to ?? 'la cliente'}` : 'Aucun email destinataire ni acheteur sur cette carte');
+      else toast.error(data?.error ?? 'Erreur');
+    } catch { toast.error('Erreur'); }
+    setSaving(false);
+  };
+
+  const updateGiftCardAmount = async (id: string) => {
+    const a = parseFloat(gcAmount);
+    if (!a || a <= 0) { toast.error('Montant invalide'); return; }
+    setSaving(true);
+    try {
+      const res = await fetch('/api/admin/giftcards', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, amount: a }) });
+      const data = await res.json();
+      if (res.ok) { toast.success('Montant mis à jour — carte renvoyée à la cliente'); setModalData(data.giftCard); refreshData(); }
+      else toast.error(data?.error ?? 'Erreur');
+    } catch { toast.error('Erreur'); }
+    setSaving(false);
+  };
+
+  useEffect(() => {
+    if (showModal === 'giftcard-detail' && modalData?.id) setGcAmount(String(modalData?.amount ?? ''));
+  }, [showModal, modalData?.id]);
+
   return (
     <div className="max-w-[1200px] mx-auto px-3 sm:px-4 py-6 sm:py-10">
       <h1 className="font-playfair text-2xl sm:text-3xl font-bold text-[#3B312D] mb-1 sm:mb-2">Administration</h1>
@@ -1009,6 +1039,20 @@ export default function AdminDashboard() {
                     <p className="text-[10px] text-[#3B312D]/40 mt-1">La carte passe en "Partiellement utilisée" s'il reste un solde, ou "Utilisée" une fois à 0€.</p>
                   </div>
                 )}
+                <div className="pt-3 border-t border-[#F8F4EF] space-y-3">
+                  <div>
+                    <label className="text-sm font-medium text-[#3B312D]/70">Modifier le montant de la carte</label>
+                    <div className="flex gap-2 mt-1">
+                      <input type="number" min={1} step="1" value={gcAmount} onChange={(e: any) => setGcAmount(e.target?.value ?? '')}
+                        className="flex-1 px-4 py-3 text-sm border border-[#F8F4EF] rounded-lg bg-[#F8F4EF]/50 text-[#3B312D]" />
+                      <button onClick={() => updateGiftCardAmount(modalData?.id)} disabled={saving}
+                        className="px-4 py-3 bg-[#C98F79] text-white font-medium rounded-lg disabled:opacity-50 whitespace-nowrap">Mettre à jour</button>
+                    </div>
+                    <p className="text-[10px] text-[#3B312D]/40 mt-1">Met le solde à ce nouveau montant et renvoie la carte à la cliente.</p>
+                  </div>
+                  <button onClick={() => resendGiftCard(modalData?.id)} disabled={saving}
+                    className="w-full px-4 py-3 border border-[#C98F79] text-[#C98F79] font-medium rounded-lg hover:bg-[#C98F79]/10 flex items-center justify-center gap-2 disabled:opacity-50"><Mail size={16} />Renvoyer la carte par email</button>
+                </div>
               </div>
             )}
 

@@ -60,11 +60,12 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Envoi de la jolie carte au destinataire si un email est fourni.
-    if (recipientEmail) {
+    // Envoi de la jolie carte : au destinataire, ou à défaut à l'acheteur.
+    const emailTo = recipientEmail || data.purchaserEmail;
+    if (emailTo) {
       await sendNotificationEmail({
         subject: 'Vous avez reçu une carte cadeau Holisya 🎁',
-        recipientEmail,
+        recipientEmail: emailTo,
         replyTo: 'contact@holisya.fr',
         body: giftCardEmail({
           recipientName: giftCard.recipientName,
@@ -74,11 +75,28 @@ export async function POST(req: NextRequest) {
       }).catch((e) => console.error('gift card email error', e));
     }
 
-    return NextResponse.json({ giftCard });
+    return NextResponse.json({ giftCard, emailedTo: emailTo || null });
   } catch (error: any) {
     console.error('Create gift card error:', error);
     return NextResponse.json({ error: 'Erreur' }, { status: 500 });
   }
+}
+
+// Envoie la carte (destinataire, ou à défaut acheteur). Retourne l'email utilisé ou null.
+async function sendCardEmail(card: any): Promise<string | null> {
+  const to = card?.recipientEmail || card?.purchasedBy?.email || '';
+  if (!to) return null;
+  await sendNotificationEmail({
+    subject: 'Votre carte cadeau Holisya 🎁',
+    recipientEmail: to,
+    replyTo: 'contact@holisya.fr',
+    body: giftCardEmail({
+      recipientName: card.recipientName,
+      amount: card.amount, code: card.code, expiresAt: card.expiresAt,
+      personalMessage: card.personalMessage,
+    }),
+  }).catch((e) => console.error('gift card email error', e));
+  return to;
 }
 
 export async function PUT(req: NextRequest) {
@@ -88,19 +106,37 @@ export async function PUT(req: NextRequest) {
     const data = await req.json();
     if (!data?.id) return NextResponse.json({ error: 'ID requis' }, { status: 400 });
 
+    // Renvoi manuel de la carte (sans modification)
+    if (data?.action === 'resend') {
+      const card = await prisma.giftCard.findUnique({ where: { id: data.id }, include: { purchasedBy: { select: { email: true } } } });
+      if (!card) return NextResponse.json({ error: 'Carte introuvable' }, { status: 404 });
+      const to = await sendCardEmail(card);
+      return NextResponse.json({ sent: !!to, to });
+    }
+
+    // Encaissement : garde son propre email d'"encaissement" (voir lib/gift-card)
     if (data?.deductAmount !== undefined) {
       const giftCard = await deductGiftCardBalance({ id: data.id, amount: parseFloat(data.deductAmount) });
       return NextResponse.json({ giftCard });
     }
 
-    const giftCard = await prisma.giftCard.update({
-      where: { id: data.id },
-      data: {
-        status: data?.status,
-        remainingAmount: data?.status === 'USED' ? 0 : undefined,
-      },
-    });
-    return NextResponse.json({ giftCard });
+    // Modification (montant et/ou statut) -> on met à jour puis on renvoie la carte à jour.
+    const update: any = {};
+    if (data?.status !== undefined) {
+      update.status = data.status;
+      if (data.status === 'USED') update.remainingAmount = 0;
+    }
+    if (data?.amount !== undefined) {
+      const a = parseFloat(data.amount);
+      if (!a || a <= 0) return NextResponse.json({ error: 'Montant invalide' }, { status: 400 });
+      update.amount = a;
+      update.remainingAmount = a;
+      update.status = 'ACTIVE';
+    }
+
+    const giftCard = await prisma.giftCard.update({ where: { id: data.id }, data: update, include: { purchasedBy: { select: { email: true } } } });
+    const to = await sendCardEmail(giftCard);
+    return NextResponse.json({ giftCard, emailedTo: to });
   } catch (error: any) {
     console.error('Update gift card error:', error);
     return NextResponse.json({ error: error?.message ?? 'Erreur' }, { status: 400 });
