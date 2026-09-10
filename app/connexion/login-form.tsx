@@ -1,13 +1,15 @@
 'use client';
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Mail, Lock, Loader2, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams?.get('callbackUrl') || '/espace-membre';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
@@ -20,7 +22,7 @@ export default function LoginForm() {
     try {
       const result = await signIn('credentials', { email, password, redirect: false });
       if (result?.error) { toast.error('Email ou mot de passe incorrect'); }
-      else { router.replace('/espace-membre'); }
+      else { router.replace(callbackUrl); }
     } catch { toast.error('Erreur de connexion'); }
     setLoading(false);
   };
@@ -60,7 +62,7 @@ export default function LoginForm() {
           {loading ? 'Connexion...' : 'Se connecter'}
         </button>
         <p className="text-center text-sm text-[#3B312D]/60">
-          Pas encore de compte ? <Link href="/inscription" className="text-[#C98F79] font-medium hover:underline">S'inscrire</Link>
+          Pas encore de compte ? <Link href={`/inscription?callbackUrl=${encodeURIComponent(callbackUrl)}`} className="text-[#C98F79] font-medium hover:underline">S'inscrire</Link>
         </p>
       </form>
     </div>

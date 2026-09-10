@@ -28,9 +28,10 @@ export default function SignupForm() {
       const res = await fetch('/api/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...form, ref }) });
       const data = await res.json();
       if (!res.ok) { toast.error(data?.error ?? 'Erreur lors de l\'inscription'); setLoading(false); return; }
+      const callbackUrl = searchParams?.get('callbackUrl') || '/espace-membre';
       const result = await signIn('credentials', { email: form.email, password: form.password, redirect: false });
-      if (result?.error) { toast.error('Compte créé ! Connectez-vous.'); router.replace('/connexion'); }
-      else { toast.success('Bienvenue chez Holisya ! Vérifiez votre email pour votre code -15€'); router.replace('/espace-membre'); }
+      if (result?.error) { toast.error('Compte créé ! Connectez-vous.'); router.replace(`/connexion?callbackUrl=${encodeURIComponent(callbackUrl)}`); }
+      else { toast.success('Bienvenue chez Holisya ! Vérifiez votre email pour votre code -15€'); router.replace(callbackUrl); }
     } catch { toast.error('Erreur de connexion'); }
     setLoading(false);
   };

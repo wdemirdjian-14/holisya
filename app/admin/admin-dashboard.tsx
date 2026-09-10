@@ -590,7 +590,7 @@ export default function AdminDashboard() {
                 </tr></thead>
                 <tbody>
                   {(appointments ?? []).map((apt: any) => (
-                    <tr key={apt?.id ?? ''} className="border-t border-[#F8F4EF] hover:bg-[#F8F4EF]/50">
+                    <tr key={apt?.id ?? ''} className="border-t border-[#F8F4EF] hover:bg-[#F8F4EF]/50 cursor-pointer" onClick={() => { setModalData(apt); setShowModal('edit-appointment'); }} title="Voir le détail et saisir l'encaissement">
                       <td className="px-4 py-3 text-[#3B312D]">{apt?.user?.firstName ?? ''} {apt?.user?.lastName ?? ''}</td>
                       <td className="px-4 py-3 text-[#3B312D]/60">{apt?.serviceType ?? ''}</td>
                       <td className="px-4 py-3 text-[#3B312D]/60 text-xs">{apt?.date ? new Date(apt.date).toLocaleString('fr-FR') : ''}</td>
@@ -599,8 +599,8 @@ export default function AdminDashboard() {
                         {apt?.source === 'online' && <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full bg-[#3B312D] text-white font-medium">En ligne{apt?.imprintSetupId ? ' · CB ✓' : ''}</span>}
                         {apt?.clientRequest && <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full bg-[#C98F79] text-white font-medium">Demande {apt.clientRequest === 'cancel' ? 'annulation' : 'report'}</span>}
                       </td>
-                      <td className="px-4 py-3 flex gap-1">
-                        <button onClick={() => { setModalData(apt); setShowModal('edit-appointment'); }} className="p-1.5 rounded hover:bg-[#C98F79]/10"><Edit size={14} className="text-[#C98F79]" /></button>
+                      <td className="px-4 py-3 flex gap-1" onClick={(e) => e.stopPropagation()}>
+                        <button onClick={() => { setModalData(apt); setShowModal('edit-appointment'); }} className="p-1.5 rounded hover:bg-[#C98F79]/10" title="Détail / encaissement"><Edit size={14} className="text-[#C98F79]" /></button>
                         <button onClick={() => handleDelete('appointments', apt?.id ?? '')} className="p-1.5 rounded hover:bg-red-50"><Trash2 size={14} className="text-red-500" /></button>
                       </td>
                     </tr>
