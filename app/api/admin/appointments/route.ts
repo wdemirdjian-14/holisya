@@ -5,6 +5,8 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { findOrCreateUserByEmail } from '@/lib/user-invite';
 import { notifyUser } from '@/lib/notify';
+import { sendNotificationEmail } from '@/lib/notifications';
+import { thankYouReviewEmail } from '@/lib/emails';
 
 function fmt(date: Date) { return new Date(date).toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }); }
 
@@ -31,10 +33,25 @@ export async function PUT(request: Request) {
       const { user } = await findOrCreateUserByEmail({ email: body.userEmail, firstName: body?.userFirstName ?? '', lastName: body?.userLastName ?? '' });
       userId = user.id;
     }
-    const updated = await prisma.appointment.update({ where: { id: body?.id ?? '' }, data: { userId, serviceType: body?.serviceType, status: body?.status, date: body?.date ? new Date(body.date) : undefined, duration: body?.duration !== undefined ? parseInt(body.duration) : undefined, clientRequest: '', clientRequestNote: '' } });
+    const updated = await prisma.appointment.update({
+      where: { id: body?.id ?? '' },
+      data: { userId, serviceType: body?.serviceType, status: body?.status, date: body?.date ? new Date(body.date) : undefined, duration: body?.duration !== undefined ? parseInt(body.duration) : undefined, clientRequest: '', clientRequestNote: '' },
+      include: { user: { select: { email: true, firstName: true, emailOptOut: true } } },
+    });
     // Notifie la cliente du changement (statut / date).
     const statusLabel: Record<string, string> = { CONFIRMED: 'confirmé', CANCELLED: 'annulé', COMPLETED: 'terminé', PENDING: 'en attente' };
     await notifyUser(updated.userId, { type: 'appointment', title: 'Rendez-vous mis à jour', body: `${updated.serviceType || 'Soin'} — ${fmt(updated.date)} (${statusLabel[updated.status] ?? updated.status})`, url: '/espace-membre/rendez-vous' });
+
+    // Dès qu'un RDV est marqué "terminé" : email de remerciement + invitation à laisser un avis Google (une seule fois).
+    if (updated.status === 'COMPLETED' && !updated.reviewEmailSent && updated.user?.email && !updated.user?.emailOptOut) {
+      await prisma.appointment.update({ where: { id: updated.id }, data: { reviewEmailSent: true } });
+      sendNotificationEmail({
+        subject: 'Merci pour votre visite 🌸',
+        recipientEmail: updated.user.email,
+        replyTo: 'contact@holisya.fr',
+        body: thankYouReviewEmail({ firstName: updated.user.firstName ?? '', serviceType: updated.serviceType ?? '' }),
+      }).catch((e) => console.error('review email error', e));
+    }
     return NextResponse.json({ success: true });
   } catch (error: any) { console.error(error); return NextResponse.json({ error: 'Erreur' }, { status: 500 }); }
 }

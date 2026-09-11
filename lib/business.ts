@@ -16,7 +16,7 @@ export const BUSINESS = {
   // Lien pour laisser un avis Google (ouvre la fiche via son CID).
   // Remplaçable par le lien direct "Demander des avis" de Google Business Profile
   // (format https://g.page/r/<code>/review) pour ouvrir directement le dialogue d'avis.
-  googleReviewUrl: 'https://www.google.com/maps?cid=17800064334613137990',
+  googleReviewUrl: 'https://g.page/r/CUZKtxs0iAb3EAE/review',
 
   // --- Localisation (institut à Boulogne-Billancourt) ---
   streetAddress: '66 Boulevard Jean Jaurès',
