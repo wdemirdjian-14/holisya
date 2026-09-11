@@ -222,6 +222,11 @@ export default function AdminDashboard() {
   };
 
   const [newPayment, setNewPayment] = useState<any>({ method: 'CASH', amount: '', giftCardCode: '' });
+  const [gcAmount, setGcAmount] = useState('');
+
+  useEffect(() => {
+    if (showModal === 'giftcard-detail' && modalData?.id) setGcAmount(String(modalData?.amount ?? ''));
+  }, [showModal, modalData?.id]);
 
   const addPayment = async (appointmentId: string) => {
     if (!appointmentId || !newPayment?.amount) { toast.error('Montant requis'); return; }
@@ -323,8 +328,6 @@ export default function AdminDashboard() {
     setSaving(false);
   };
 
-  const [gcAmount, setGcAmount] = useState('');
-
   const resendGiftCard = async (id: string) => {
     setSaving(true);
     try {
@@ -348,10 +351,6 @@ export default function AdminDashboard() {
     } catch { toast.error('Erreur'); }
     setSaving(false);
   };
-
-  useEffect(() => {
-    if (showModal === 'giftcard-detail' && modalData?.id) setGcAmount(String(modalData?.amount ?? ''));
-  }, [showModal, modalData?.id]);
 
   return (
     <div className="max-w-[1200px] mx-auto px-3 sm:px-4 py-6 sm:py-10">
