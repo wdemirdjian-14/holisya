@@ -2,7 +2,7 @@
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { User, Calendar, CreditCard, Gift, ArrowRight, Send, Loader2, RefreshCw, Play, Award, Share2, Copy, Smile, Trash2 } from 'lucide-react';
+import { User, Calendar, CreditCard, Gift, ArrowRight, Send, Loader2, RefreshCw, Play, Award, Share2, Copy, Smile, Trash2, Download } from 'lucide-react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -259,9 +259,15 @@ export default function MemberDashboard() {
                     className="font-mono text-sm font-semibold text-[#C98F79] hover:underline">{gc?.code ?? ''}</button>
                   <p className="text-xs text-[#3B312D]/60 mt-1">{gc?.amount ?? 0}€ • Restant {gc?.remainingAmount ?? 0}€ • Expire le {gc?.expiresAt ? new Date(gc.expiresAt).toLocaleDateString('fr-FR') : ''}</p>
                 </div>
-                <span className={`text-xs px-3 py-1 rounded-full font-medium ${gc?.status === 'ACTIVE' ? 'bg-[#AAB7A0]/20 text-[#AAB7A0]' : gc?.status === 'USED' ? 'bg-[#C98F79]/20 text-[#C98F79]' : 'bg-red-100 text-red-600'}`}>
-                  {gc?.status === 'ACTIVE' ? 'Active' : gc?.status === 'USED' ? 'Utilisée' : gc?.status}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs px-3 py-1 rounded-full font-medium ${gc?.status === 'ACTIVE' ? 'bg-[#AAB7A0]/20 text-[#AAB7A0]' : gc?.status === 'USED' ? 'bg-[#C98F79]/20 text-[#C98F79]' : 'bg-red-100 text-red-600'}`}>
+                    {gc?.status === 'ACTIVE' ? 'Active' : gc?.status === 'USED' ? 'Utilisée' : gc?.status}
+                  </span>
+                  <a href={`/api/member/gift-cards/image?id=${gc?.id ?? ''}`} download
+                    className="text-xs px-3 py-1.5 rounded-lg border border-[#C98F79] text-[#C98F79] hover:bg-[#C98F79]/10 inline-flex items-center gap-1.5">
+                    <Download size={13} />Télécharger
+                  </a>
+                </div>
               </div>
             ))}
           </div>

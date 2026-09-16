@@ -92,12 +92,14 @@ export function giftCardEmail(opts: { recipientName?: string; amount: number; co
     <p style="color:${C.ink};">${opts.recipientName ? `Bonjour ${opts.recipientName},` : 'Bonjour,'}</p>
     <p style="color:${C.ink};">Une jolie attention vous attend${opts.fromName ? ` de la part de ${opts.fromName}` : ''} : une carte cadeau Holisya pour un moment de bien-être rien qu'à vous. 🌸</p>
     <table role="presentation" width="100%" style="margin:22px 0;border-collapse:separate;">
-      <tr><td style="background:linear-gradient(135deg,#D6A491,#AC6A52);border-radius:18px;padding:28px 24px;text-align:center;">
-        <div style="font-family:Georgia,serif;letter-spacing:4px;color:#fff;font-size:18px;">HOLISYA</div>
-        <div style="color:#ffffff;opacity:.85;font-size:11px;letter-spacing:2px;margin-top:2px;">CARTE CADEAU</div>
-        <div style="font-family:Georgia,serif;color:#fff;font-size:44px;font-weight:bold;margin:14px 0 6px;">${opts.amount} €</div>
-        <div style="display:inline-block;background:rgba(255,255,255,.9);color:#8a4f3c;font-weight:bold;letter-spacing:2px;padding:8px 16px;border-radius:8px;font-size:15px;">${opts.code}</div>
-        <div style="color:#fff;opacity:.9;font-size:12px;margin-top:14px;">Valable jusqu'au ${validUntil}</div>
+      <tr><td style="background:#0D1A13;border-radius:18px;padding:12px;">
+        <div style="border:1px solid rgba(255,255,255,.55);border-radius:12px;padding:30px 24px 28px;text-align:center;">
+          <img src="${SITE_URL}/images/logo-holisya.png" alt="Holisya Paris" width="180" style="display:block;margin:0 auto;width:180px;max-width:62%;height:auto;" />
+          <div style="color:#ffffff;opacity:.7;font-size:11px;letter-spacing:3px;margin-top:16px;">CARTE CADEAU</div>
+          <div style="font-family:Georgia,'Times New Roman',serif;color:#ffffff;font-size:46px;font-weight:bold;margin:12px 0 10px;">${opts.amount} €</div>
+          <div style="display:inline-block;background:#F8F4EF;color:#0D1A13;font-weight:bold;letter-spacing:2px;padding:8px 16px;border-radius:8px;font-size:15px;">${opts.code}</div>
+          <div style="color:#ffffff;opacity:.8;font-size:12px;margin-top:16px;">Valable jusqu'au ${validUntil}</div>
+        </div>
       </td></tr>
     </table>
     ${opts.personalMessage ? `<div style="background:${C.cream};border-left:3px solid ${C.terra};border-radius:8px;padding:14px 16px;margin:0 0 12px;"><p style="margin:0;color:${C.ink};font-style:italic;">« ${opts.personalMessage} »</p></div>` : ''}
