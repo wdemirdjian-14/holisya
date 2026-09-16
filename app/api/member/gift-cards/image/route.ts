@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
       || (!!card.recipientEmail && !!email && card.recipientEmail.toLowerCase() === email.toLowerCase());
     if (!owns && !isAdmin) return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
 
-    const png = await renderGiftCardPng(card);
+    const png = await renderGiftCardPng({ ...card, remaining: card.remainingAmount });
     return new NextResponse(png as any, {
       status: 200,
       headers: {

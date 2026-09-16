@@ -33,13 +33,14 @@ function wrap(text: string, max = 34, maxLines = 3): string[] {
 }
 
 export async function renderGiftCardPng(card: {
-  amount: number; code: string; expiresAt: Date | string; personalMessage?: string; recipientName?: string;
+  amount: number; code: string; expiresAt: Date | string; personalMessage?: string; recipientName?: string; remaining?: number;
 }): Promise<Buffer> {
   const W = 1000, H = 1180;
   const bg = '#0D1A13';
   const line = 'rgba(244,239,230,0.55)';
   const white = '#F6EFE6';
   const validUntil = new Date(card.expiresAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+  const partial = typeof card.remaining === 'number' && card.remaining < card.amount;
   const serif = "Georgia, 'Times New Roman', 'DejaVu Serif', serif";
 
   const logo = getLogo();
@@ -66,7 +67,8 @@ export async function renderGiftCardPng(card: {
     <rect x="44" y="44" width="${W - 88}" height="${H - 88}" fill="none" stroke="${line}" stroke-width="2"/>
     ${logo ? `<image href="${logo}" x="${logoX}" y="${logoY}" width="${logoW}" height="${logoH}" preserveAspectRatio="xMidYMid meet"/>` : ''}
     <text x="${W / 2}" y="500" font-family="${serif}" font-size="22" letter-spacing="6" fill="${white}" fill-opacity="0.72" text-anchor="middle">CARTE CADEAU</text>
-    <text x="${W / 2}" y="640" font-family="${serif}" font-size="112" font-weight="bold" fill="#ffffff" text-anchor="middle">${card.amount} €</text>
+    <text x="${W / 2}" y="640" font-family="${serif}" font-size="112" font-weight="bold" fill="#ffffff" text-anchor="middle">${partial ? (card.remaining as number) : card.amount} €</text>
+    ${partial ? `<text x="${W / 2}" y="686" font-family="${serif}" font-size="20" fill="${white}" fill-opacity="0.6" text-anchor="middle">solde restant · carte de ${card.amount} €</text>` : ''}
     <rect x="${pillX}" y="${pillY}" width="${pillW}" height="${pillH}" rx="10" fill="#F8F4EF"/>
     <text x="${W / 2}" y="${pillY + 39}" font-family="'DejaVu Sans Mono', monospace" font-size="26" letter-spacing="2" font-weight="bold" fill="#0D1A13" text-anchor="middle">${code}</text>
     <text x="${W / 2}" y="${pillY + 108}" font-family="${serif}" font-size="22" fill="${white}" fill-opacity="0.82" text-anchor="middle">Valable jusqu'au ${esc(validUntil)}</text>

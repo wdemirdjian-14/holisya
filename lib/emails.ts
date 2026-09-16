@@ -85,27 +85,41 @@ export function thankYouReviewEmail(opts: { firstName: string; serviceType?: str
   return emailShell('Merci pour votre visite 🌸', inner, { showContact: true });
 }
 
-/** Jolie carte cadeau envoyée au destinataire. */
-export function giftCardEmail(opts: { recipientName?: string; amount: number; code: string; expiresAt: Date; personalMessage?: string; fromName?: string }): string {
-  const validUntil = opts.expiresAt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+/** Jolie carte cadeau animée envoyée au destinataire (affiche le solde restant si `remaining` est fourni). */
+export function giftCardEmail(opts: { recipientName?: string; amount: number; code: string; expiresAt: Date; personalMessage?: string; fromName?: string; remaining?: number }): string {
+  const validUntil = new Date(opts.expiresAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+  const partial = typeof opts.remaining === 'number' && opts.remaining < opts.amount;
+  const big = partial ? (opts.remaining as number) : opts.amount;
+  const style = `<style>
+    @keyframes hgcIn{0%{opacity:0;transform:translateY(14px)}100%{opacity:1;transform:none}}
+    @keyframes hgcShine{0%{transform:translateX(-130%)}55%,100%{transform:translateX(230%)}}
+    @keyframes hgcFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+    .hgc-card{animation:hgcIn .8s ease-out both}
+    .hgc-amount{animation:hgcIn 1s .25s ease-out both}
+    .hgc-shine{animation:hgcShine 3.6s ease-in-out 1.2s infinite}
+    .hgc-spark{animation:hgcFloat 3s ease-in-out infinite}
+    .hgc-spark2{animation:hgcFloat 3.6s ease-in-out .6s infinite}
+  </style>`;
   const inner = `
     <p style="color:${C.ink};">${opts.recipientName ? `Bonjour ${opts.recipientName},` : 'Bonjour,'}</p>
     <p style="color:${C.ink};">Une jolie attention vous attend${opts.fromName ? ` de la part de ${opts.fromName}` : ''} : une carte cadeau Holisya pour un moment de bien-être rien qu'à vous. 🌸</p>
-    <table role="presentation" width="100%" style="margin:22px 0;border-collapse:separate;">
-      <tr><td style="background:#0D1A13;border-radius:18px;padding:12px;">
-        <div style="border:1px solid rgba(255,255,255,.55);border-radius:12px;padding:30px 24px 28px;text-align:center;">
-          <img src="${SITE_URL}/images/logo-holisya.png" alt="Holisya Paris" width="180" style="display:block;margin:0 auto;width:180px;max-width:62%;height:auto;" />
-          <div style="color:#ffffff;opacity:.7;font-size:11px;letter-spacing:3px;margin-top:16px;">CARTE CADEAU</div>
-          <div style="font-family:Georgia,'Times New Roman',serif;color:#ffffff;font-size:46px;font-weight:bold;margin:12px 0 10px;">${opts.amount} €</div>
-          <div style="display:inline-block;background:#F8F4EF;color:#0D1A13;font-weight:bold;letter-spacing:2px;padding:8px 16px;border-radius:8px;font-size:15px;">${opts.code}</div>
-          <div style="color:#ffffff;opacity:.8;font-size:12px;margin-top:16px;">Valable jusqu'au ${validUntil}</div>
-        </div>
-      </td></tr>
-    </table>
+    <div class="hgc-card" style="position:relative;overflow:hidden;background:#0D1A13;border-radius:18px;padding:12px;margin:22px 0;">
+      <div class="hgc-shine" style="position:absolute;top:0;bottom:0;left:0;width:45%;background:linear-gradient(100deg,rgba(255,255,255,0),rgba(255,255,255,.14),rgba(255,255,255,0));transform:translateX(-130%);"></div>
+      <div style="position:relative;border:1px solid rgba(255,255,255,.55);border-radius:12px;padding:30px 24px 28px;text-align:center;">
+        <span class="hgc-spark" style="position:absolute;top:12px;left:18px;font-size:16px;">✨</span>
+        <span class="hgc-spark2" style="position:absolute;top:14px;right:20px;font-size:14px;">✨</span>
+        <img src="${SITE_URL}/images/logo-holisya.png" alt="Holisya Paris" width="180" style="display:block;margin:0 auto;width:180px;max-width:62%;height:auto;" />
+        <div style="color:#ffffff;opacity:.7;font-size:11px;letter-spacing:3px;margin-top:16px;">CARTE CADEAU</div>
+        <div class="hgc-amount" style="font-family:Georgia,'Times New Roman',serif;color:#ffffff;font-size:46px;font-weight:bold;margin:12px 0 ${partial ? '2px' : '10px'};">${big} €</div>
+        ${partial ? `<div style="color:#ffffff;opacity:.6;font-size:12px;margin:0 0 10px;">solde restant · carte de ${opts.amount} €</div>` : ''}
+        <div style="display:inline-block;background:#F8F4EF;color:#0D1A13;font-weight:bold;letter-spacing:2px;padding:8px 16px;border-radius:8px;font-size:15px;">${opts.code}</div>
+        <div style="color:#ffffff;opacity:.8;font-size:12px;margin-top:16px;">Valable jusqu'au ${validUntil}</div>
+      </div>
+    </div>
     ${opts.personalMessage ? `<div style="background:${C.cream};border-left:3px solid ${C.terra};border-radius:8px;padding:14px 16px;margin:0 0 12px;"><p style="margin:0;color:${C.ink};font-style:italic;">« ${opts.personalMessage} »</p></div>` : ''}
     <p style="color:${C.muted};font-size:13px;">Pour en profiter, présentez ce code lors de votre rendez-vous ou saisissez-le lors de votre réservation en ligne.</p>
     <div style="text-align:center;margin:18px 0 0;">${emailButton('Prendre rendez-vous', `${SITE_URL}/rendez-vous`)}</div>`;
-  return emailShell('Vous avez reçu une carte cadeau 🎁', inner, { showContact: true });
+  return style + emailShell('Vous avez reçu une carte cadeau 🎁', inner, { showContact: true });
 }
 
 /** Email confirmant l'encaissement (utilisation) d'une carte cadeau. */

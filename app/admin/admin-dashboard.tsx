@@ -223,9 +223,15 @@ export default function AdminDashboard() {
 
   const [newPayment, setNewPayment] = useState<any>({ method: 'CASH', amount: '', giftCardCode: '' });
   const [gcAmount, setGcAmount] = useState('');
+  const [gcOwnerEmail, setGcOwnerEmail] = useState('');
+  const [gcOwnerName, setGcOwnerName] = useState('');
 
   useEffect(() => {
-    if (showModal === 'giftcard-detail' && modalData?.id) setGcAmount(String(modalData?.amount ?? ''));
+    if (showModal === 'giftcard-detail' && modalData?.id) {
+      setGcAmount(String(modalData?.amount ?? ''));
+      setGcOwnerEmail(String(modalData?.recipientEmail ?? ''));
+      setGcOwnerName(String(modalData?.recipientName ?? ''));
+    }
   }, [showModal, modalData?.id]);
 
   const addPayment = async (appointmentId: string) => {
@@ -347,6 +353,18 @@ export default function AdminDashboard() {
       const res = await fetch('/api/admin/giftcards', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, amount: a }) });
       const data = await res.json();
       if (res.ok) { toast.success('Montant mis à jour — carte renvoyée à la cliente'); setModalData(data.giftCard); refreshData(); }
+      else toast.error(data?.error ?? 'Erreur');
+    } catch { toast.error('Erreur'); }
+    setSaving(false);
+  };
+
+  const changeGiftCardOwner = async (id: string) => {
+    if (!gcOwnerEmail.trim()) { toast.error('Email du nouveau propriétaire requis'); return; }
+    setSaving(true);
+    try {
+      const res = await fetch('/api/admin/giftcards', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, recipientEmail: gcOwnerEmail.trim(), recipientName: gcOwnerName.trim() }) });
+      const data = await res.json();
+      if (res.ok) { toast.success(`Propriétaire mis à jour — carte envoyée à ${gcOwnerEmail.trim()}`); setModalData(data.giftCard); refreshData(); }
       else toast.error(data?.error ?? 'Erreur');
     } catch { toast.error('Erreur'); }
     setSaving(false);
@@ -1049,8 +1067,24 @@ export default function AdminDashboard() {
                     </div>
                     <p className="text-[10px] text-[#3B312D]/40 mt-1">Met le solde à ce nouveau montant et renvoie la carte à la cliente.</p>
                   </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-[#3B312D]/70">Changer le propriétaire (destinataire)</label>
+                    <div className="space-y-2 mt-1">
+                      <input type="text" value={gcOwnerName} onChange={(e: any) => setGcOwnerName(e.target?.value ?? '')} placeholder="Nom du destinataire"
+                        className="w-full px-4 py-3 text-sm border border-[#F8F4EF] rounded-lg bg-[#F8F4EF]/50 text-[#3B312D]" />
+                      <div className="flex gap-2">
+                        <input type="email" value={gcOwnerEmail} onChange={(e: any) => setGcOwnerEmail(e.target?.value ?? '')} placeholder="Email du destinataire"
+                          className="flex-1 px-4 py-3 text-sm border border-[#F8F4EF] rounded-lg bg-[#F8F4EF]/50 text-[#3B312D]" />
+                        <button onClick={() => changeGiftCardOwner(modalData?.id)} disabled={saving}
+                          className="px-4 py-3 bg-[#AAB7A0] text-white font-medium rounded-lg disabled:opacity-50 whitespace-nowrap">Envoyer</button>
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-[#3B312D]/40 mt-1">Réattribue la carte à ce destinataire et la lui envoie (l'ancien lien de compte est retiré).</p>
+                  </div>
+
                   <button onClick={() => resendGiftCard(modalData?.id)} disabled={saving}
-                    className="w-full px-4 py-3 border border-[#C98F79] text-[#C98F79] font-medium rounded-lg hover:bg-[#C98F79]/10 flex items-center justify-center gap-2 disabled:opacity-50"><Mail size={16} />Renvoyer la carte par email</button>
+                    className="w-full px-4 py-3 border border-[#C98F79] text-[#C98F79] font-medium rounded-lg hover:bg-[#C98F79]/10 flex items-center justify-center gap-2 disabled:opacity-50"><Mail size={16} />Envoyer la carte à jour (solde restant : {modalData?.remainingAmount ?? 0}€)</button>
                 </div>
               </div>
             )}

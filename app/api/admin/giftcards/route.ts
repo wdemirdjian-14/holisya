@@ -94,6 +94,7 @@ async function sendCardEmail(card: any): Promise<string | null> {
       recipientName: card.recipientName,
       amount: card.amount, code: card.code, expiresAt: card.expiresAt,
       personalMessage: card.personalMessage,
+      remaining: card.remainingAmount,
     }),
   }).catch((e) => console.error('gift card email error', e));
   return to;
@@ -133,6 +134,12 @@ export async function PUT(req: NextRequest) {
       update.remainingAmount = a;
       update.status = 'ACTIVE';
     }
+    // Changement de propriétaire (destinataire) : on met à jour et on délie l'ancien compte.
+    if (data?.recipientEmail !== undefined) {
+      update.recipientEmail = String(data.recipientEmail || '').trim();
+      update.receivedById = null;
+    }
+    if (data?.recipientName !== undefined) update.recipientName = String(data.recipientName || '').trim();
 
     const giftCard = await prisma.giftCard.update({ where: { id: data.id }, data: update, include: { purchasedBy: { select: { email: true } } } });
     const to = await sendCardEmail(giftCard);
