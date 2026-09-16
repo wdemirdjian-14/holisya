@@ -1,6 +1,9 @@
 import { PrismaClient } from '@prisma/client';
 import nodemailer from 'nodemailer';
 import { thankYouReviewEmail } from '../lib/emails';
+import { htmlToText } from '../lib/notifications';
+
+const UNSUB = '<mailto:contact@holisya.fr?subject=Desinscription>, <https://www.holisya.fr/desinscription>';
 
 const prisma = new PrismaClient();
 
@@ -32,8 +35,10 @@ async function main() {
         from: process.env.SMTP_FROM ?? '"Holisya" <contact@holisya.fr>',
         to: email,
         replyTo: 'contact@holisya.fr',
-        subject: 'Merci pour votre visite 🌸',
+        subject: 'Merci pour votre visite',
         html: thankYouReviewEmail({ firstName: appt.user?.firstName ?? '', serviceType: appt.serviceType ?? '' }),
+        text: htmlToText(thankYouReviewEmail({ firstName: appt.user?.firstName ?? '', serviceType: appt.serviceType ?? '' })),
+        headers: { 'List-Unsubscribe': UNSUB },
       });
       sent += 1;
     } catch (e) {

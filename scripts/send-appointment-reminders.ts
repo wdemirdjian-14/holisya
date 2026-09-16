@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import nodemailer from 'nodemailer';
 import webpush from 'web-push';
 import { emailShell, appointmentActions } from '../lib/emails';
+import { htmlToText } from '../lib/notifications';
 
 const prisma = new PrismaClient();
 
@@ -47,8 +48,10 @@ async function main() {
           from: process.env.SMTP_FROM ?? '"Holisya" <contact@holisya.fr>',
           to: appt.user.email,
           replyTo: 'contact@holisya.fr',
-          subject: 'Rappel : votre rendez-vous chez Holisya 🌸',
+          subject: 'Rappel : votre rendez-vous chez Holisya',
           html: body(appt.user.firstName ?? '', appt.serviceType ?? '', when),
+          text: htmlToText(body(appt.user.firstName ?? '', appt.serviceType ?? '', when)),
+          headers: { 'List-Unsubscribe': '<mailto:contact@holisya.fr?subject=Desinscription>, <https://www.holisya.fr/desinscription>' },
         });
         sent += 1;
       } catch (e) { console.error('mail fail', appt.user.email, e); }

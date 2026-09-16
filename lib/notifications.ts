@@ -17,12 +17,23 @@ function getTransporter() {
   return transporter;
 }
 
+// Version texte simple à partir du HTML (améliore le score anti-spam : multipart/alternative).
+export function htmlToText(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<(br|\/p|\/div|\/tr|\/h[1-6])\s*\/?>(?=)/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&laquo;|&raquo;/g, '"')
+    .replace(/[ \t]+/g, ' ').replace(/\n\s*\n\s*\n+/g, '\n\n').trim();
+}
+
 export async function sendNotificationEmail(opts: {
   notificationId?: string;
   subject: string;
   body: string;
   recipientEmail: string;
   replyTo?: string;
+  text?: string;
 }) {
   try {
     const info = await getTransporter().sendMail({
@@ -30,7 +41,11 @@ export async function sendNotificationEmail(opts: {
       to: opts.recipientEmail,
       subject: opts.subject,
       html: opts.body,
+      text: opts.text ?? htmlToText(opts.body),
       replyTo: opts.replyTo,
+      headers: {
+        'List-Unsubscribe': '<mailto:contact@holisya.fr?subject=Desinscription>, <https://www.holisya.fr/desinscription>',
+      },
     });
     return { success: true, messageId: info.messageId };
   } catch (e) {
