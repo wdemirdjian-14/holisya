@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import path from 'path';
+import { unlink } from 'fs/promises';
 import { processAndSaveImage } from '@/lib/image-process';
 
 const MAX_SIZE = 25 * 1024 * 1024;
@@ -17,6 +18,21 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const files = formData.getAll('files') as File[];
     if (!files || files.length === 0) return NextResponse.json({ error: 'Fichier(s) requis' }, { status: 400 });
+
+    // Remplacement d'une photo existante (modification).
+    const photoId = formData.get('photoId') as string | null;
+    if (photoId) {
+      const existing = await prisma.galleryPhoto.findUnique({ where: { id: photoId } });
+      if (!existing) return NextResponse.json({ error: 'Photo introuvable' }, { status: 404 });
+      const file = files[0];
+      if (file.size > MAX_SIZE) return NextResponse.json({ error: 'Fichier trop volumineux (max 25 Mo)' }, { status: 400 });
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const filename = await processAndSaveImage({ input: buffer, mime: file.type, destDir: UPLOAD_DIR, baseName: `gallery-${Date.now()}-${Math.random().toString(36).slice(2, 8)}` });
+      const newUrl = `/uploads/gallery/${filename}`;
+      if (existing.imageUrl?.startsWith('/uploads/gallery/')) await unlink(path.join(process.cwd(), 'public', existing.imageUrl)).catch(() => {});
+      const photo = await prisma.galleryPhoto.update({ where: { id: photoId }, data: { imageUrl: newUrl } });
+      return NextResponse.json({ photos: [photo], replaced: true });
+    }
 
     const maxSort = await prisma.galleryPhoto.aggregate({ _max: { sortOrder: true } });
     let nextSort = (maxSort._max.sortOrder ?? 0) + 1;
