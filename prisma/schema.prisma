@@ -41,6 +41,8 @@ model User {
   firstName      String    @default("")
   lastName       String    @default("")
   phone          String    @default("")
+  city           String    @default("")
+  postalCode     String    @default("")
   photoUrl       String    @default("")
   role           Role      @default(USER)
   carePreferences String   @default("")

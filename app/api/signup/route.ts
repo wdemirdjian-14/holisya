@@ -8,7 +8,7 @@ import { ensureReferralCode } from '@/lib/loyalty';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { email, password, firstName, lastName, phone, ref } = body ?? {};
+    const { email, password, firstName, lastName, phone, city, postalCode, ref } = body ?? {};
     if (!email || !password) return NextResponse.json({ error: 'Email et mot de passe requis' }, { status: 400 });
     const existing = await prisma.user.findUnique({ where: { email: email?.toLowerCase?.() ?? '' } });
     if (existing) return NextResponse.json({ error: 'Un compte existe déjà avec cet email' }, { status: 400 });
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 12);
     const user = await prisma.user.create({
-      data: { email: email.toLowerCase(), password: hashedPassword, firstName: firstName ?? '', lastName: lastName ?? '', phone: phone ?? '', referredById },
+      data: { email: email.toLowerCase(), password: hashedPassword, firstName: firstName ?? '', lastName: lastName ?? '', phone: phone ?? '', city: city ?? '', postalCode: postalCode ?? '', referredById },
     });
     await ensureReferralCode(user.id).catch(() => {});
 

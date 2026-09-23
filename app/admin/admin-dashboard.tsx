@@ -1277,6 +1277,13 @@ export default function AdminDashboard() {
                   <div><label className="text-sm font-medium text-[#3B312D]/70">Nom</label>
                     <input value={modalData?.lastName ?? ''} onChange={(e: any) => setModalData({...(modalData ?? {}), lastName: e.target?.value ?? ''})} className="w-full mt-1 px-4 py-3 text-sm border border-[#F8F4EF] rounded-lg bg-[#F8F4EF]/50 text-[#3B312D]" /></div>
                 </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div><label className="text-sm font-medium text-[#3B312D]/70">Code postal</label>
+                    <input value={modalData?.postalCode ?? ''} onChange={(e: any) => setModalData({...(modalData ?? {}), postalCode: e.target?.value ?? ''})} placeholder="92100" className="w-full mt-1 px-4 py-3 text-sm border border-[#F8F4EF] rounded-lg bg-[#F8F4EF]/50 text-[#3B312D]" /></div>
+                  <div><label className="text-sm font-medium text-[#3B312D]/70">Ville</label>
+                    <input value={modalData?.city ?? ''} onChange={(e: any) => setModalData({...(modalData ?? {}), city: e.target?.value ?? ''})} placeholder="Boulogne-Billancourt" className="w-full mt-1 px-4 py-3 text-sm border border-[#F8F4EF] rounded-lg bg-[#F8F4EF]/50 text-[#3B312D]" /></div>
+                </div>
+                <p className="text-[11px] text-[#3B312D]/40 -mt-1">Le code postal sert au ciblage par région dans les campagnes (75/77/78/91-95 = Île-de-France).</p>
                 <div><label className="text-sm font-medium text-[#3B312D]/70">Crédits</label>
                   <input type="number" value={modalData?.credits ?? 0} onChange={(e: any) => setModalData({...(modalData ?? {}), credits: parseInt(e.target?.value ?? '0')})} className="w-full mt-1 px-4 py-3 text-sm border border-[#F8F4EF] rounded-lg bg-[#F8F4EF]/50 text-[#3B312D]" /></div>
                 <button onClick={() => handleSave('clients', modalData, 'PUT')} disabled={saving}

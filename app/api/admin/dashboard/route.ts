@@ -10,7 +10,7 @@ export async function GET() {
     if (!session?.user || (session.user as any)?.role !== 'ADMIN') return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
 
     const [clients, appointments, giftCards, subscriptions, promos, blogPosts, contacts, testimonials, services] = await Promise.all([
-      prisma.user.findMany({ orderBy: { createdAt: 'desc' }, select: { id: true, email: true, firstName: true, lastName: true, phone: true, credits: true, role: true, source: true, resetToken: true, createdAt: true } }),
+      prisma.user.findMany({ orderBy: { createdAt: 'desc' }, select: { id: true, email: true, firstName: true, lastName: true, phone: true, city: true, postalCode: true, credits: true, role: true, source: true, resetToken: true, createdAt: true } }),
       prisma.appointment.findMany({ orderBy: { date: 'desc' }, include: { user: { select: { firstName: true, lastName: true, email: true } }, payments: { orderBy: { createdAt: 'desc' } } } }),
       prisma.giftCard.findMany({ orderBy: { createdAt: 'desc' }, include: { purchasedBy: { select: { firstName: true, lastName: true, email: true } }, receivedBy: { select: { firstName: true, lastName: true, email: true } } } }),
       prisma.subscription.findMany({ orderBy: { createdAt: 'desc' }, include: { user: { select: { firstName: true, lastName: true, email: true } } } }),

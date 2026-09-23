@@ -9,7 +9,7 @@ export async function PUT(request: Request) {
     const session = await getServerSession(authOptions);
     if (!session?.user || (session.user as any)?.role !== 'ADMIN') return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
     const body = await request.json();
-    await prisma.user.update({ where: { id: body?.id ?? '' }, data: { firstName: body?.firstName, lastName: body?.lastName, credits: body?.credits ?? 0 } });
+    await prisma.user.update({ where: { id: body?.id ?? '' }, data: { firstName: body?.firstName, lastName: body?.lastName, credits: body?.credits ?? 0, city: body?.city ?? undefined, postalCode: body?.postalCode ?? undefined } });
     return NextResponse.json({ success: true });
   } catch (error: any) { console.error(error); return NextResponse.json({ error: 'Erreur' }, { status: 500 }); }
 }

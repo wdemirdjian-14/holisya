@@ -105,7 +105,7 @@ export default function EmailsTab({ clients }: { clients: any[] }) {
     any: 'Peu importe', never: 'Jamais venue', recent1m: 'Venue récemment (< 1 mois)',
     gt1m: 'Sans RDV depuis > 1 mois', gt3m: 'Sans RDV depuis > 3 mois', gt6m: 'Sans RDV depuis > 6 mois',
   };
-  const REGION_LABELS: Record<string, string> = { any: 'Toutes', idf: 'Île-de-France (01)', other: 'Autres régions (02–05)' };
+  const REGION_LABELS: Record<string, string> = { any: 'Toutes', idf: 'Île-de-France', other: 'Autres régions' };
 
   const saveTemplate = async () => {
     setSaving(true);

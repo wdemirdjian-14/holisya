@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 export default function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '' });
+  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', city: '', postalCode: '', password: '', confirmPassword: '' });
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [ref, setRef] = useState('');
@@ -76,6 +76,18 @@ export default function SignupForm() {
           <div className="relative mt-1"><Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#3B312D]/30" />
             <input type="tel" value={form.phone} onChange={(e: any) => update('phone', e.target?.value ?? '')}
               className="w-full pl-10 pr-4 py-3 text-sm border border-[#F8F4EF] rounded-lg bg-[#F8F4EF]/50 focus:outline-none focus:ring-2 focus:ring-[#C98F79]/30 text-[#3B312D]" placeholder="06 XX XX XX XX" />
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <label className="text-sm font-medium text-[#3B312D]/70">Code postal</label>
+            <input type="text" inputMode="numeric" value={form.postalCode} onChange={(e: any) => update('postalCode', e.target?.value ?? '')}
+              className="w-full mt-1 px-4 py-3 text-sm border border-[#F8F4EF] rounded-lg bg-[#F8F4EF]/50 focus:outline-none focus:ring-2 focus:ring-[#C98F79]/30 text-[#3B312D]" placeholder="92100" />
+          </div>
+          <div className="col-span-2">
+            <label className="text-sm font-medium text-[#3B312D]/70">Ville</label>
+            <input type="text" value={form.city} onChange={(e: any) => update('city', e.target?.value ?? '')}
+              className="w-full mt-1 px-4 py-3 text-sm border border-[#F8F4EF] rounded-lg bg-[#F8F4EF]/50 focus:outline-none focus:ring-2 focus:ring-[#C98F79]/30 text-[#3B312D]" placeholder="Boulogne-Billancourt" />
           </div>
         </div>
         <div>
