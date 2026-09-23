@@ -50,7 +50,6 @@ export const BUSINESS = {
   // --- Réseaux / profils (champ sameAs du balisage) : à compléter ---
   sameAs: [
     'https://www.instagram.com/holisya_/',
-    'https://www.planity.com/le-chalet-des-cils-92100-boulogne-billancourt',
     // 'https://www.facebook.com/...',    // à ajouter si page Facebook
   ] as string[],
 

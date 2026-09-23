@@ -2,9 +2,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Clock, ChevronLeft, ChevronRight, ArrowLeft, Check, CreditCard, ExternalLink, Calendar } from 'lucide-react';
+import { Loader2, Clock, ChevronLeft, ChevronRight, ArrowLeft, Check, CreditCard, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
-import { PLANITY_URL } from '@/lib/config';
+import { BUSINESS } from '@/lib/business';
 
 const DOW = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 const MONTHS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
@@ -117,16 +117,15 @@ export default function BookingClient() {
 
   if (loading) return <div className="flex items-center justify-center py-32"><Loader2 size={32} className="animate-spin text-[#C98F79]" /></div>;
 
-  // Réservation en ligne désactivée → repli Planity
+  // Réservation en ligne momentanément indisponible → invitation à nous contacter.
   if (!config?.enabled) {
     return (
-      <div className="max-w-[900px] mx-auto px-4 py-10">
-        <div className="text-center mb-8">
-          <h1 className="font-playfair text-3xl md:text-4xl font-bold text-[#3B312D]">Prendre rendez-vous</h1>
-          <p className="text-[#3B312D]/60 mt-3">Réservez votre créneau via notre agenda en ligne.</p>
-        </div>
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden" style={{ minHeight: 800 }}>
-          <iframe src={PLANITY_URL} title="Réservation Planity" className="w-full border-0" style={{ height: 800 }} allow="payment; geolocation" loading="lazy" />
+      <div className="max-w-[680px] mx-auto px-4 py-16 text-center">
+        <h1 className="font-playfair text-3xl md:text-4xl font-bold text-[#3B312D]">Prendre rendez-vous</h1>
+        <p className="text-[#3B312D]/60 mt-4">La réservation en ligne est momentanément indisponible. Contactez-nous, nous convenons ensemble d'un créneau avec plaisir.</p>
+        <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
+          {BUSINESS.phone && <a href={`tel:${BUSINESS.phone}`} className="px-6 py-3 bg-[#C98F79] text-white font-medium rounded-lg">{BUSINESS.phoneDisplay || BUSINESS.phone}</a>}
+          <a href="/contact" className="px-6 py-3 border border-[#C98F79] text-[#C98F79] font-medium rounded-lg">Nous contacter</a>
         </div>
       </div>
     );
@@ -251,12 +250,6 @@ export default function BookingClient() {
         </div>
       )}
 
-      {/* Repli Planity discret */}
-      {step !== 'done' && (
-        <p className="text-center text-xs text-[#3B312D]/40 mt-8">
-          Vous préférez Planity ? <a href={PLANITY_URL} target="_blank" rel="noopener noreferrer" className="text-[#C98F79] hover:underline inline-flex items-center gap-0.5">Réserver via Planity <ExternalLink size={11} /></a>
-        </p>
-      )}
     </div>
   );
 }

@@ -1,9 +1,10 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Plus, Trash2, Loader2, Image as ImageIcon } from 'lucide-react';
+import { Plus, Trash2, Loader2, Image as ImageIcon, Sun, X } from 'lucide-react';
 import { toast } from 'sonner';
 import dynamic from 'next/dynamic';
 import { imageAspect, isCroppable } from '@/lib/image-crop-utils';
+import PhotoBrightness from '@/components/photo-brightness';
 
 const ImageCropModal = dynamic(() => import('@/components/image-crop-modal'), { ssr: false });
 
@@ -13,6 +14,7 @@ export default function GalleryTab() {
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [cropReq, setCropReq] = useState<{ file: File; onDone: (f: File) => void } | null>(null);
+  const [brightPhoto, setBrightPhoto] = useState<any>(null);
 
   // Photo unitaire au mauvais format -> recadrage carré ; sinon envoi direct (y compris multi).
   const handleSelect = async (files: FileList | null) => {
@@ -101,7 +103,10 @@ export default function GalleryTab() {
                 <label className="flex items-center gap-1.5 text-xs text-[#3B312D]/70">
                   <input type="checkbox" checked={p.isActive} onChange={() => toggleActive(p)} className="rounded" />Active
                 </label>
-                <button onClick={() => remove(p.id)} className="p-1 rounded hover:bg-red-50"><Trash2 size={13} className="text-red-500" /></button>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => setBrightPhoto(p)} title="Luminosité" className="p-1 rounded hover:bg-[#C98F79]/10"><Sun size={14} className="text-[#C98F79]" /></button>
+                  <button onClick={() => remove(p.id)} title="Supprimer" className="p-1 rounded hover:bg-red-50"><Trash2 size={13} className="text-red-500" /></button>
+                </div>
               </div>
             </div>
           ))}
@@ -115,6 +120,18 @@ export default function GalleryTab() {
           onCancel={() => setCropReq(null)}
           onCropped={(f) => { const req = cropReq; setCropReq(null); req.onDone(f); }}
         />
+      )}
+
+      {brightPhoto && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setBrightPhoto(null)}>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md" onClick={(e: any) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-playfair text-lg font-semibold text-[#3B312D]">Luminosité de la photo</h3>
+              <button onClick={() => setBrightPhoto(null)} className="p-1.5 rounded hover:bg-[#F8F4EF]"><X size={18} /></button>
+            </div>
+            <PhotoBrightness url={brightPhoto.imageUrl} onApplied={() => load()} />
+          </div>
+        </div>
       )}
     </div>
   );
