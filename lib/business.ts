@@ -54,6 +54,12 @@ export const BUSINESS = {
     // 'https://www.facebook.com/...',    // à ajouter si page Facebook
   ] as string[],
 
+  // --- Salons (adresses affichées sur le site) ---
+  locations: [
+    { name: 'Boulogne-Billancourt', streetAddress: '66 Boulevard Jean Jaurès', postalCode: '92100', city: 'Boulogne-Billancourt', comingSoon: false },
+    { name: 'Antibes', streetAddress: '16 Avenue Guillabert', postalCode: '06600', city: 'Antibes', comingSoon: true },
+  ] as { name: string; streetAddress: string; postalCode: string; city: string; comingSoon: boolean }[],
+
   // Prestations phares (prix TTC) — alimentent le catalogue d'offres du balisage
   services: [
     { name: 'Soin du visage Kobido', price: 120, duration: 60 },

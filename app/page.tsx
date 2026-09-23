@@ -1,7 +1,7 @@
 import Header from '@/components/header';
 import Footer from '@/components/footer';
 import HomeClient from '@/components/home-client';
-import PlanityFloat from '@/components/planity-float';
+import NewsletterPopup from '@/components/newsletter-popup';
 import { prisma } from '@/lib/db';
 import { getSiteContentMap } from '@/lib/site-content';
 import { areSubscriptionsEnabled } from '@/lib/site-flags';
@@ -19,7 +19,7 @@ export default async function HomePage() {
     <>
       <Header />
       <HomeClient subscriptionsEnabled={subscriptionsEnabled} galleryPhotos={JSON.parse(JSON.stringify(galleryPhotos ?? []))} latestPosts={JSON.parse(JSON.stringify(latestPosts ?? []))} content={content} />
-      <PlanityFloat />
+      <NewsletterPopup />
       <Footer />
     </>
   );

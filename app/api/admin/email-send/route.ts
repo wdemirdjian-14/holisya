@@ -13,7 +13,8 @@ export async function POST(req: NextRequest) {
     if (!session?.user || (session.user as any)?.role !== 'ADMIN') return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
     const data = await req.json();
     const recipientIds: string[] = Array.isArray(data?.recipientIds) ? data.recipientIds : [];
-    if (recipientIds.length === 0) return NextResponse.json({ error: 'Aucun destinataire sélectionné' }, { status: 400 });
+    const rawEmails: string[] = Array.isArray(data?.rawEmails) ? data.rawEmails.map((e: any) => String(e)) : [];
+    if (recipientIds.length === 0 && rawEmails.length === 0) return NextResponse.json({ error: 'Aucun destinataire sélectionné' }, { status: 400 });
     if (!data?.subject || !data?.body) return NextResponse.json({ error: 'Sujet et contenu requis' }, { status: 400 });
 
     const recipients = await prisma.user.findMany({ where: { id: { in: recipientIds } } });
@@ -54,7 +55,23 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    return NextResponse.json({ sent, failed, skippedOptOut, total: recipients.length });
+    // Emails "bruts" (liste newsletter — non liés à un compte client, pas de personnalisation nom).
+    const seen = new Set(recipients.map((u) => (u.email ?? '').toLowerCase()));
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    for (const raw of rawEmails) {
+      const em = String(raw).trim().toLowerCase();
+      if (!EMAIL_RE.test(em) || seen.has(em)) continue;
+      seen.add(em);
+      const vars = { prenom: '', nom: '', email: em };
+      const subject = renderTemplate(data.subject, vars);
+      const finalBody = withUnsubscribeFooter(renderTemplate(data.body, vars), `${appUrl}/desinscription`);
+      const result = await sendNotificationEmail({ subject, body: finalBody, recipientEmail: em });
+      const success = result?.success !== false;
+      if (success) sent += 1; else failed += 1;
+      await prisma.emailLog.create({ data: { recipientEmail: em, recipientName: '', subject, templateId: data?.templateId ?? '', status: success ? 'SENT' : 'FAILED', error: success ? '' : 'Échec envoi SMTP' } });
+    }
+
+    return NextResponse.json({ sent, failed, skippedOptOut, total: sent + failed + skippedOptOut });
   } catch (error: any) {
     console.error('Send email error:', error);
     return NextResponse.json({ error: 'Erreur envoi' }, { status: 500 });

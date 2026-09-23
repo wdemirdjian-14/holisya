@@ -8,10 +8,22 @@ export default async function Footer() {
   return (
     <footer className="bg-[#3B312D] text-white/80">
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
             <img src="/images/logo-holisya.png" alt="Holisya" className="h-10 w-auto brightness-0 invert mb-3" />
             <p className="text-sm leading-relaxed text-white/60">{content['footer.description']}</p>
+          </div>
+          <div>
+            <h4 className="font-playfair text-lg font-semibold text-white mb-3">Nos salons</h4>
+            <div className="space-y-3">
+              {BUSINESS.locations.map((loc) => (
+                <div key={loc.name} className="text-sm text-white/60">
+                  <p className="text-white/85 font-medium flex items-center gap-1.5">{loc.name}{loc.comingSoon && <span className="text-[10px] uppercase tracking-wider text-[#C98F79] border border-[#C98F79]/40 rounded px-1.5 py-0.5">Bientôt</span>}</p>
+                  <p>{loc.streetAddress}</p>
+                  <p>{loc.postalCode} {loc.city}</p>
+                </div>
+              ))}
+            </div>
           </div>
           <div>
             <h4 className="font-playfair text-lg font-semibold text-white mb-3">Navigation</h4>

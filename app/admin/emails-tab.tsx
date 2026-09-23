@@ -10,7 +10,8 @@ const VARIABLES = [
 ];
 
 export default function EmailsTab({ clients }: { clients: any[] }) {
-  const [section, setSection] = useState<'templates' | 'send' | 'history' | 'push' | 'lists'>('send');
+  const [section, setSection] = useState<'templates' | 'send' | 'history' | 'push' | 'lists' | 'newsletter'>('send');
+  const [newsletterSubs, setNewsletterSubs] = useState<any[]>([]);
 
   const emptyFilters = { activity: 'any', minAppointments: 0, subscription: 'any', source: 'any', newAccount: 'any', region: 'any' };
   const [filters, setFilters] = useState<any>(emptyFilters);
@@ -48,7 +49,7 @@ export default function EmailsTab({ clients }: { clients: any[] }) {
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
-  const [recipientMode, setRecipientMode] = useState<'single' | 'selected' | 'all' | 'liste'>('single');
+  const [recipientMode, setRecipientMode] = useState<'single' | 'selected' | 'all' | 'liste' | 'newsletter'>('single');
   const [singleEmail, setSingleEmail] = useState('');
   const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
@@ -62,8 +63,21 @@ export default function EmailsTab({ clients }: { clients: any[] }) {
   };
 
   const loadSegments = () => fetch('/api/admin/segments').then(r => r.json()).then(d => setSegments(d?.segments ?? [])).catch(() => {});
+  const loadNewsletter = () => fetch('/api/admin/newsletter?list=antibes').then(r => r.json()).then(d => setNewsletterSubs(d?.subscribers ?? [])).catch(() => {});
 
-  useEffect(() => { load(); loadPush(); loadSegments(); }, []);
+  useEffect(() => { load(); loadPush(); loadSegments(); loadNewsletter(); }, []);
+
+  const exportNewsletterCsv = () => {
+    const rows = [['email', 'liste', 'source', 'date'], ...newsletterSubs.map((s: any) => [s.email, s.list, s.source, new Date(s.createdAt).toLocaleString('fr-FR')])];
+    const csv = rows.map(r => r.map((c: any) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const url = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a'); a.href = url; a.download = 'newsletter-antibes.csv'; a.click(); URL.revokeObjectURL(url);
+  };
+
+  const deleteNewsletterSub = async (id: string) => {
+    const res = await fetch(`/api/admin/newsletter?id=${id}`, { method: 'DELETE' });
+    if (res.ok) { setNewsletterSubs((prev) => prev.filter((s: any) => s.id !== id)); }
+  };
 
   const runPreview = async (f: any) => {
     setPreviewing(true);
@@ -135,30 +149,37 @@ export default function EmailsTab({ clients }: { clients: any[] }) {
   const send = async () => {
     if (!subject || !body) { toast.error('Sujet et contenu requis'); return; }
     let recipientIds: string[] = [];
-    if (recipientMode === 'single') {
-      const client = clients.find((c: any) => (c?.email ?? '').toLowerCase() === singleEmail.toLowerCase());
-      if (!client) { toast.error('Aucun client trouvé avec cet email'); return; }
-      recipientIds = [client.id];
-    } else if (recipientMode === 'selected') {
-      recipientIds = selectedClientIds;
-    } else if (recipientMode === 'liste') {
-      const seg = segments.find((s: any) => s.id === selectedSegmentId);
-      if (!seg) { toast.error('Choisissez une liste'); return; }
-      const res = await fetch('/api/admin/segments/preview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filters: seg.filters }) });
-      const d = await res.json();
-      recipientIds = d?.ids ?? [];
+    let rawEmails: string[] = [];
+    if (recipientMode === 'newsletter') {
+      rawEmails = newsletterSubs.map((s: any) => s.email).filter(Boolean);
+      if (rawEmails.length === 0) { toast.error('Liste newsletter vide'); return; }
+      if (!confirm(`Envoyer cet email à ${rawEmails.length} inscrit(e)s newsletter ?`)) return;
     } else {
-      recipientIds = clients.map((c: any) => c?.id).filter(Boolean);
+      if (recipientMode === 'single') {
+        const client = clients.find((c: any) => (c?.email ?? '').toLowerCase() === singleEmail.toLowerCase());
+        if (!client) { toast.error('Aucun client trouvé avec cet email'); return; }
+        recipientIds = [client.id];
+      } else if (recipientMode === 'selected') {
+        recipientIds = selectedClientIds;
+      } else if (recipientMode === 'liste') {
+        const seg = segments.find((s: any) => s.id === selectedSegmentId);
+        if (!seg) { toast.error('Choisissez une liste'); return; }
+        const res = await fetch('/api/admin/segments/preview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filters: seg.filters }) });
+        const d = await res.json();
+        recipientIds = d?.ids ?? [];
+      } else {
+        recipientIds = clients.map((c: any) => c?.id).filter(Boolean);
+      }
+      if (recipientIds.length === 0) { toast.error('Aucun destinataire'); return; }
+      if (recipientMode !== 'single' && !confirm(`Envoyer cet email à ${recipientIds.length} destinataire(s) ?`)) return;
     }
-    if (recipientIds.length === 0) { toast.error('Aucun destinataire'); return; }
-    if (recipientMode !== 'single' && !confirm(`Envoyer cet email à ${recipientIds.length} destinataire(s) ?`)) return;
 
     setSending(true);
     try {
       const res = await fetch('/api/admin/email-send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ templateId: selectedTemplateId, subject, body, recipientIds }),
+        body: JSON.stringify({ templateId: selectedTemplateId, subject, body, recipientIds, rawEmails }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -174,7 +195,7 @@ export default function EmailsTab({ clients }: { clients: any[] }) {
   return (
     <div>
       <div className="flex gap-2 mb-6">
-        {[{ id: 'send', label: 'Envoyer', icon: Send }, { id: 'lists', label: 'Listes', icon: Users }, { id: 'templates', label: 'Templates', icon: FileText }, { id: 'push', label: 'Notifications push', icon: Bell }, { id: 'history', label: 'Historique', icon: History }].map((s: any) => {
+        {[{ id: 'send', label: 'Envoyer', icon: Send }, { id: 'lists', label: 'Listes', icon: Users }, { id: 'newsletter', label: `Newsletter Antibes (${newsletterSubs.length})`, icon: Mail }, { id: 'templates', label: 'Templates', icon: FileText }, { id: 'push', label: 'Notifications push', icon: Bell }, { id: 'history', label: 'Historique', icon: History }].map((s: any) => {
           const Icon = s.icon;
           return (
             <button key={s.id} onClick={() => setSection(s.id)}
@@ -197,7 +218,7 @@ export default function EmailsTab({ clients }: { clients: any[] }) {
           <div>
             <label className="text-sm font-medium text-[#3B312D]/70">Destinataires</label>
             <div className="flex gap-2 mt-1">
-              {[{ id: 'single', label: 'Un contact' }, { id: 'liste', label: 'Une liste' }, { id: 'selected', label: 'Sélection' }, { id: 'all', label: `Tous (${clients.length})` }].map((m: any) => (
+              {[{ id: 'single', label: 'Un contact' }, { id: 'liste', label: 'Une liste' }, { id: 'newsletter', label: `Newsletter (${newsletterSubs.length})` }, { id: 'selected', label: 'Sélection' }, { id: 'all', label: `Tous (${clients.length})` }].map((m: any) => (
                 <button key={m.id} onClick={() => setRecipientMode(m.id)} className={`px-3 py-2 text-xs rounded-lg font-medium ${recipientMode === m.id ? 'bg-[#AAB7A0] text-white' : 'bg-[#F8F4EF] text-[#3B312D]/70'}`}>{m.label}</button>
               ))}
             </div>
@@ -216,6 +237,9 @@ export default function EmailsTab({ clients }: { clients: any[] }) {
                   </select>}
               <p className="text-[11px] text-[#3B312D]/40 mt-1">La liste est recalculée à l'envoi (clientes à jour selon les critères).</p>
             </div>
+          )}
+          {recipientMode === 'newsletter' && (
+            <p className="text-xs text-[#3B312D]/60">Envoi à la liste <strong>Ouverture Antibes</strong> — {newsletterSubs.length} inscrit(e)s (emails collectés par le pop-up, non-clients).</p>
           )}
           {recipientMode === 'selected' && (
             <div className="max-h-40 overflow-y-auto border border-[#F8F4EF] rounded-lg p-2 space-y-1">
@@ -241,6 +265,36 @@ export default function EmailsTab({ clients }: { clients: any[] }) {
           <button onClick={send} disabled={sending} className="w-full py-3 bg-[#C98F79] text-white font-medium rounded-lg disabled:opacity-50 flex items-center justify-center gap-2">
             {sending ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />}{sending ? 'Envoi en cours...' : 'Envoyer'}
           </button>
+        </div>
+      )}
+
+      {section === 'newsletter' && (
+        <div className="bg-white rounded-xl shadow-sm p-6">
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+            <div>
+              <h3 className="font-playfair text-lg font-semibold text-[#3B312D]">Liste « Ouverture Antibes »</h3>
+              <p className="text-xs text-[#3B312D]/50 mt-1">{newsletterSubs.length} inscrit(e)s via le pop-up d'accueil. Ces emails ne sont pas des comptes clients.</p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={exportNewsletterCsv} disabled={newsletterSubs.length === 0} className="px-3 py-2 text-xs rounded-lg border border-[#C98F79] text-[#C98F79] hover:bg-[#C98F79]/10 disabled:opacity-40">Exporter CSV</button>
+              <button onClick={() => { setRecipientMode('newsletter'); setSection('send'); }} disabled={newsletterSubs.length === 0} className="px-3 py-2 text-xs rounded-lg bg-[#C98F79] text-white disabled:opacity-40">Envoyer une campagne</button>
+            </div>
+          </div>
+          {newsletterSubs.length === 0 ? (
+            <p className="text-sm text-[#3B312D]/40 py-8 text-center">Aucun inscrit pour l'instant.</p>
+          ) : (
+            <div className="max-h-96 overflow-y-auto border border-[#F8F4EF] rounded-lg divide-y divide-[#F8F4EF]">
+              {newsletterSubs.map((s: any) => (
+                <div key={s.id} className="px-4 py-2.5 flex items-center justify-between gap-2 text-sm">
+                  <span className="text-[#3B312D] truncate">{s.email}</span>
+                  <div className="flex items-center gap-3 flex-none">
+                    <span className="text-[11px] text-[#3B312D]/40">{new Date(s.createdAt).toLocaleDateString('fr-FR')}</span>
+                    <button onClick={() => deleteNewsletterSub(s.id)} className="p-1 rounded hover:bg-red-50"><Trash2 size={13} className="text-red-500" /></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

@@ -506,3 +506,14 @@ model Segment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model NewsletterSubscriber {
+  id        String   @id @default(cuid())
+  email     String
+  list      String   @default("antibes")
+  source    String   @default("popup")
+  createdAt DateTime @default(now())
+
+  @@unique([email, list])
+  @@index([list])
+}
