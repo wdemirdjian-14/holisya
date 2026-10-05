@@ -13,6 +13,7 @@ export default function BookingTab() {
   const [saving, setSaving] = useState(false);
   const [newWin, setNewWin] = useState({ weekday: 1, startTime: '09:00', endTime: '18:00' });
   const [newClosure, setNewClosure] = useState('');
+  const [newRange, setNewRange] = useState({ start: '', end: '' });
 
   const load = () => {
     setLoading(true);
@@ -48,6 +49,13 @@ export default function BookingTab() {
   };
   const delClosure = async (id: string) => { const res = await fetch(`/api/admin/availability?kind=closure&id=${id}`, { method: 'DELETE' }); if (res.ok) load(); };
 
+  const addClosureRange = async () => {
+    if (!newRange.start || !newRange.end) { toast.error('Renseignez les deux dates'); return; }
+    const res = await fetch('/api/admin/availability', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'closure-range', startDate: newRange.start, endDate: newRange.end }) });
+    const d = await res.json();
+    if (res.ok) { toast.success(`${d.created} jour(s) fermé(s)`); setNewRange({ start: '', end: '' }); load(); } else toast.error(d?.error ?? 'Erreur');
+  };
+
   if (loading || !settings) return <div className="flex items-center justify-center py-20"><Loader2 size={28} className="animate-spin text-[#C98F79]" /></div>;
 
   const num = 'w-full mt-1 px-3 py-2 text-sm border border-[#F8F4EF] rounded-lg bg-[#F8F4EF]/50 text-[#3B312D]';
@@ -56,7 +64,19 @@ export default function BookingTab() {
     <div className="space-y-6">
       <div>
         <h2 className="font-playfair text-xl font-semibold text-[#3B312D]">Réservation en ligne</h2>
-        <p className="text-xs text-[#3B312D]/50 mt-1">Vos clientes réservent directement sur le site (comme Planity). Vous ouvrez les créneaux et validez les demandes.</p>
+        <p className="text-xs text-[#3B312D]/50 mt-1">Vos clientes réservent directement sur le site. Vous ouvrez les créneaux et gérez les fermetures.</p>
+      </div>
+
+      {/* Bandeau état + bouton ON/OFF rapide */}
+      <div className={`rounded-xl p-4 flex items-center justify-between gap-4 shadow-sm ${settings.onlineBookingEnabled ? 'bg-[#AAB7A0]/15' : 'bg-red-50 border border-red-200'}`}>
+        <span className={`text-sm font-semibold flex items-center gap-2 ${settings.onlineBookingEnabled ? 'text-[#3B312D]' : 'text-red-600'}`}>
+          <span className={`w-2.5 h-2.5 rounded-full ${settings.onlineBookingEnabled ? 'bg-[#AAB7A0]' : 'bg-red-500'}`} />
+          {settings.onlineBookingEnabled ? 'Réservations ouvertes' : 'Réservations bloquées'}
+        </span>
+        <button onClick={() => saveSettings({ onlineBookingEnabled: !settings.onlineBookingEnabled })} disabled={saving}
+          className={`px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50 ${settings.onlineBookingEnabled ? 'bg-red-500 hover:bg-red-600' : 'bg-[#AAB7A0] hover:bg-[#96a58c]'}`}>
+          {settings.onlineBookingEnabled ? 'Bloquer les réservations' : 'Rouvrir les réservations'}
+        </button>
       </div>
 
       {/* Interrupteurs principaux */}
@@ -127,10 +147,16 @@ export default function BookingTab() {
             </span>
           ))}
         </div>
-        <div className="flex items-end gap-2">
-          <div><label className="text-xs text-[#3B312D]/60">Date à fermer</label><input type="date" value={newClosure} onChange={(e) => setNewClosure(e.target.value)} className="block mt-1 px-3 py-2 text-sm border border-[#F8F4EF] rounded-lg text-[#3B312D]" /></div>
+        <div className="flex flex-wrap items-end gap-2">
+          <div><label className="text-xs text-[#3B312D]/60">Fermer un jour</label><input type="date" value={newClosure} onChange={(e) => setNewClosure(e.target.value)} className="block mt-1 px-3 py-2 text-sm border border-[#F8F4EF] rounded-lg text-[#3B312D]" /></div>
           <button onClick={addClosure} className="px-4 py-2 bg-[#3B312D] text-white text-sm rounded-lg flex items-center gap-1.5"><Calendar size={14} />Fermer ce jour</button>
         </div>
+        <div className="flex flex-wrap items-end gap-2 mt-3 pt-3 border-t border-[#F8F4EF]">
+          <div><label className="text-xs text-[#3B312D]/60">Fermer une période — du</label><input type="date" value={newRange.start} onChange={(e) => setNewRange({ ...newRange, start: e.target.value })} className="block mt-1 px-3 py-2 text-sm border border-[#F8F4EF] rounded-lg text-[#3B312D]" /></div>
+          <div><label className="text-xs text-[#3B312D]/60">au</label><input type="date" value={newRange.end} onChange={(e) => setNewRange({ ...newRange, end: e.target.value })} className="block mt-1 px-3 py-2 text-sm border border-[#F8F4EF] rounded-lg text-[#3B312D]" /></div>
+          <button onClick={addClosureRange} className="px-4 py-2 bg-[#3B312D] text-white text-sm rounded-lg flex items-center gap-1.5"><Ban size={14} />Fermer la période</button>
+        </div>
+        <p className="text-[11px] text-[#3B312D]/40 mt-2">Les jours fermés n'affichent aucun créneau réservable (vacances, congés…). Retirez-les en cliquant sur la croix.</p>
       </div>
     </div>
   );

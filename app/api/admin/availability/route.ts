@@ -33,6 +33,23 @@ export async function POST(req: NextRequest) {
     const c = await prisma.availabilityClosure.upsert({ where: { date }, update: { reason: d?.reason ?? '' }, create: { date, reason: d?.reason ?? '' } });
     return NextResponse.json({ closure: c });
   }
+  if (d?.kind === 'closure-range') {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d?.startDate ?? '') || !/^\d{4}-\d{2}-\d{2}$/.test(d?.endDate ?? '')) return NextResponse.json({ error: 'Dates invalides' }, { status: 400 });
+    if (d.endDate < d.startDate) return NextResponse.json({ error: 'La date de fin doit suivre le début' }, { status: 400 });
+    // Génère la liste des jours (plafonnée à 120 pour éviter les abus).
+    const days: string[] = [];
+    const cur = new Date(d.startDate + 'T00:00:00');
+    const end = new Date(d.endDate + 'T00:00:00');
+    for (let i = 0; i < 120 && cur <= end; i++) {
+      days.push(`${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}-${String(cur.getDate()).padStart(2, '0')}`);
+      cur.setDate(cur.getDate() + 1);
+    }
+    for (const ds of days) {
+      const date = dateStrToLocal(ds, 0);
+      await prisma.availabilityClosure.upsert({ where: { date }, update: { reason: d?.reason ?? '' }, create: { date, reason: d?.reason ?? '' } });
+    }
+    return NextResponse.json({ created: days.length });
+  }
   return NextResponse.json({ error: 'kind invalide' }, { status: 400 });
 }
 
