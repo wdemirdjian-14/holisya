@@ -337,6 +337,14 @@ export default function EmailsTab({ clients }: { clients: any[] }) {
                   <option value="any">Peu importe</option><option value="lt1m">Nouvelles (&lt; 1 mois)</option>
                 </select>
               </div>
+              <div>
+                <label className="text-sm font-medium text-[#3B312D]/70">Provenance</label>
+                <select value={filters.source} onChange={(e: any) => setFilters({ ...filters, source: e.target.value })} className="w-full mt-1 px-4 py-2.5 text-sm border border-[#F8F4EF] rounded-lg bg-[#F8F4EF]/50 text-[#3B312D]">
+                  <option value="any">Toutes</option>
+                  <option value="planity">Base Planity (Départ Paris)</option>
+                  <option value="signup">Inscription site</option>
+                </select>
+              </div>
             </div>
 
             <div className="bg-[#F8F4EF]/70 rounded-lg px-4 py-3 flex items-center justify-between">
@@ -374,7 +382,7 @@ export default function EmailsTab({ clients }: { clients: any[] }) {
               <div className="space-y-2">
                 {segments.map((s: any) => {
                   const f = s.filters ?? {};
-                  const desc = [ACTIVITY_LABELS[f.activity] !== 'Peu importe' ? ACTIVITY_LABELS[f.activity] : '', f.region && f.region !== 'any' ? REGION_LABELS[f.region] : '', f.subscription === 'active' ? 'abonnées' : f.subscription === 'none' ? 'sans abo' : '', f.minAppointments ? `≥ ${f.minAppointments} RDV` : '', f.newAccount === 'lt1m' ? 'nouvelles' : ''].filter(Boolean).join(' · ') || 'Toutes les clientes';
+                  const desc = [f.source === 'planity' ? 'Base Planity' : f.source === 'signup' ? 'Inscrites site' : '', ACTIVITY_LABELS[f.activity] !== 'Peu importe' ? ACTIVITY_LABELS[f.activity] : '', f.region && f.region !== 'any' ? REGION_LABELS[f.region] : '', f.subscription === 'active' ? 'abonnées' : f.subscription === 'none' ? 'sans abo' : '', f.minAppointments ? `≥ ${f.minAppointments} RDV` : '', f.newAccount === 'lt1m' ? 'nouvelles' : ''].filter(Boolean).join(' · ') || 'Toutes les clientes';
                   return (
                     <div key={s.id} className="border border-[#F8F4EF] rounded-lg p-3 flex items-center justify-between gap-2">
                       <div className="min-w-0">

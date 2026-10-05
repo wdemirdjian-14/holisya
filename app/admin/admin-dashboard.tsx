@@ -581,6 +581,7 @@ export default function AdminDashboard() {
                       <td className="px-4 py-3 font-medium text-[#3B312D]">
                         {c?.firstName ?? ''} {c?.lastName ?? ''}
                         {c?.source === 'import' && c?.resetToken && <span className="ml-2 text-[10px] px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded-full font-medium align-middle">Invitation en attente</span>}
+                        {c?.source === 'planity' && <span className="ml-2 text-[10px] px-1.5 py-0.5 bg-[#C98F79]/15 text-[#C98F79] rounded-full font-medium align-middle">Planity</span>}
                       </td>
                       <td className="px-4 py-3 text-[#3B312D]/60">{c?.email ?? ''}</td>
                       <td className="px-4 py-3 text-[#3B312D]/60">{c?.phone ?? '-'}</td>
