@@ -55,9 +55,11 @@ export default function EmailsTab({ clients }: { clients: any[] }) {
   const [loadingRecips, setLoadingRecips] = useState(false);
   const [recipSearch, setRecipSearch] = useState('');
   const [addEmail, setAddEmail] = useState('');
-  const [maxPerDay, setMaxPerDay] = useState(300);
-  const RECOMMENDED_MAX = 300; // par jour, domaine jeune + IP mutualisée Ionos
+  const [maxPerDay, setMaxPerDay] = useState(250);
+  const RECOMMENDED_MAX = 250; // envois/jour au départ, domaine jeune + IP mutualisée Ionos (puis montée progressive)
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  // Nombre de jours d'envoi avec montée en puissance (250, 350, 490, …) — identique au serveur.
+  const rampDays = (total: number, start: number) => { let cap = start, cum = 0, d = 0; while (cum < total && d < 90) { cum += Math.min(2000, Math.round(cap)); cap *= 1.4; d++; } return Math.max(1, d); };
   const [singleEmail, setSingleEmail] = useState('');
   const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
@@ -202,9 +204,9 @@ export default function EmailsTab({ clients }: { clients: any[] }) {
       rawEmails = recipientRows.filter((r: any) => !r.userId).map((r: any) => r.email);
       const total = recipientIds.length + rawEmails.length;
       if (total === 0) { toast.error('Aucun destinataire dans la liste'); return; }
-      const days = Math.ceil(total / maxPerDay);
+      const days = rampDays(total, maxPerDay);
       const msg = total > maxPerDay
-        ? `Envoyer à ${total} destinataires ? Pour protéger votre réputation, l'envoi sera étalé sur ${days} jour(s) (max ${maxPerDay}/jour), clientes les plus récentes d'abord.`
+        ? `Envoyer à ${total} destinataires ? L'envoi démarre à ${maxPerDay}/jour puis augmente progressivement (≈ ${days} jours au total), clientes les plus récentes d'abord — pour protéger votre réputation.`
         : `Envoyer cet email à ${total} destinataire(s) ?`;
       if (!confirm(msg)) return;
     } else {
@@ -232,7 +234,7 @@ export default function EmailsTab({ clients }: { clients: any[] }) {
       if (res.ok) {
         if (data.queued) {
           toast.success(data.days > 1
-            ? `Campagne mise en file : ${data.total} emails étalés sur ${data.days} jour(s) (max ${data.maxPerDay}/j, clientes récentes d'abord).`
+            ? `Campagne en file : ${data.total} emails, démarrage à ${data.startPerDay}/j puis montée en puissance (~${data.days} j), clientes récentes d'abord.`
             : `Campagne mise en file : ${data.total} emails envoyés progressivement pour protéger votre réputation.`);
           loadCampaigns(); setSection('history');
         } else {
@@ -305,12 +307,12 @@ export default function EmailsTab({ clients }: { clients: any[] }) {
                 const q = recipSearch.trim().toLowerCase();
                 const filtered = q ? recipientRows.filter((r: any) => (r.email + ' ' + (r.firstName ?? '') + ' ' + (r.lastName ?? '')).toLowerCase().includes(q)) : recipientRows;
                 const total = recipientRows.length;
-                const days = Math.ceil(total / maxPerDay);
+                const days = rampDays(total, maxPerDay);
                 return (
                   <>
                     <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
                       <span className="text-sm font-medium text-[#3B312D]">{total} destinataire(s){q ? ` · ${filtered.length} affiché(s)` : ''}</span>
-                      {total > RECOMMENDED_MAX && <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">Grande liste — envoi étalé sur {days} j</span>}
+                      {total > maxPerDay && <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">Envoi progressif sur ~{days} j</span>}
                     </div>
                     <div className="flex flex-wrap gap-2 mb-2">
                       <input value={recipSearch} onChange={(e: any) => setRecipSearch(e.target.value)} placeholder="Rechercher un email / nom…" className="flex-1 min-w-[160px] px-3 py-2 text-sm border border-[#F8F4EF] rounded-lg bg-white text-[#3B312D]" />
@@ -334,10 +336,10 @@ export default function EmailsTab({ clients }: { clients: any[] }) {
                       ))}
                       {filtered.length > 300 && <p className="text-[10px] text-[#3B312D]/40 text-center py-2">… {filtered.length - 300} autres (utilisez la recherche)</p>}
                     </div>
-                    <div className="flex items-center gap-2 mt-2">
-                      <label className="text-xs text-[#3B312D]/60">Max par jour</label>
-                      <input type="number" min={20} max={2000} value={maxPerDay} onChange={(e: any) => setMaxPerDay(parseInt(e.target.value || '300') || 300)} className="w-24 px-2 py-1.5 text-sm border border-[#F8F4EF] rounded-lg bg-white text-[#3B312D]" />
-                      <span className="text-[11px] text-[#3B312D]/40">recommandé ≤ {RECOMMENDED_MAX}/jour (réputation). Au-delà : étalé sur plusieurs jours, prioritaire aux clientes récentes.</span>
+                    <div className="flex items-center gap-2 mt-2 flex-wrap">
+                      <label className="text-xs text-[#3B312D]/60">Envois/jour au départ</label>
+                      <input type="number" min={20} max={2000} value={maxPerDay} onChange={(e: any) => setMaxPerDay(parseInt(e.target.value || '250') || 250)} className="w-24 px-2 py-1.5 text-sm border border-[#F8F4EF] rounded-lg bg-white text-[#3B312D]" />
+                      <span className="text-[11px] text-[#3B312D]/40">On démarre à {maxPerDay}/jour puis on augmente progressivement (montée en puissance) pour préserver votre réputation. Clientes récentes d'abord.</span>
                     </div>
                   </>
                 );

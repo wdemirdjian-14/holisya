@@ -45,21 +45,27 @@ export async function POST(req: NextRequest) {
     }
     if (list.length === 0) return NextResponse.json({ error: 'Aucun destinataire valide' }, { status: 400 });
 
-    // Gros envoi → file d'attente étalée par priorité (cron).
+    // Gros envoi → file d'attente étalée avec montée en puissance (warm-up : démarre bas, augmente chaque jour).
     if (list.length > BATCH_THRESHOLD) {
-      const maxPerDay = Math.min(2000, Math.max(20, parseInt(data?.maxPerDay) || 400));
+      const start = Math.min(2000, Math.max(20, parseInt(data?.maxPerDay) || 250));
+      const GROWTH = 1.4, MAX_DAY = 2000;
       const now = new Date();
       const nineAm = (dayOffset: number) => { const d = new Date(); d.setHours(9, 0, 0, 0); d.setDate(d.getDate() + dayOffset); return d; };
-      const days = Math.ceil(list.length / maxPerDay);
+      // Plafonds journaliers croissants : 250, 350, 490, …
+      const caps: number[] = []; let cap = start, cum = 0, idxGuard = 0;
+      while (cum < list.length && idxGuard < 90) { const c = Math.min(MAX_DAY, Math.round(cap)); caps.push(c); cum += c; cap *= GROWTH; idxGuard++; }
+      const dayForIndex = (idx: number) => { let acc = 0; for (let d = 0; d < caps.length; d++) { acc += caps[d]; if (idx < acc) return d; } return caps.length - 1; };
+      const days = caps.length;
+
       const campaign = await prisma.emailCampaign.create({
         data: { subject: data.subject, body: data.body, templateId: data?.templateId ?? '', total: list.length, status: 'queued' },
       });
       const items = list.map((r, idx) => {
-        const day = Math.floor(idx / maxPerDay);
+        const day = dayForIndex(idx);
         return { campaignId: campaign.id, userId: r.userId, email: r.email, firstName: r.firstName, lastName: r.lastName, scheduledFor: day === 0 ? now : nineAm(day) };
       });
       for (let i = 0; i < items.length; i += 1000) await prisma.emailQueueItem.createMany({ data: items.slice(i, i + 1000) });
-      return NextResponse.json({ queued: true, total: list.length, campaignId: campaign.id, skippedOptOut, days, maxPerDay });
+      return NextResponse.json({ queued: true, total: list.length, campaignId: campaign.id, skippedOptOut, days, startPerDay: start });
     }
 
     // Petit envoi → immédiat.
