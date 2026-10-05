@@ -14,8 +14,8 @@ async function main() {
   const appUrl = process.env.NEXTAUTH_URL ?? 'https://www.holisya.fr';
 
   const items = await prisma.emailQueueItem.findMany({
-    where: { status: 'pending' },
-    orderBy: { createdAt: 'asc' },
+    where: { status: 'pending', scheduledFor: { lte: new Date() } },
+    orderBy: { scheduledFor: 'asc' },
     take: BATCH_PER_RUN,
     include: { campaign: true },
   });

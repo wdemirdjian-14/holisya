@@ -51,6 +51,13 @@ export default function EmailsTab({ clients }: { clients: any[] }) {
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [recipientMode, setRecipientMode] = useState<'single' | 'selected' | 'all' | 'liste' | 'newsletter'>('single');
+  const [recipientRows, setRecipientRows] = useState<any[]>([]);
+  const [loadingRecips, setLoadingRecips] = useState(false);
+  const [recipSearch, setRecipSearch] = useState('');
+  const [addEmail, setAddEmail] = useState('');
+  const [maxPerDay, setMaxPerDay] = useState(300);
+  const RECOMMENDED_MAX = 300; // par jour, domaine jeune + IP mutualisée Ionos
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const [singleEmail, setSingleEmail] = useState('');
   const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
@@ -77,6 +84,34 @@ export default function EmailsTab({ clients }: { clients: any[] }) {
     const t = setInterval(loadCampaigns, 15000);
     return () => clearInterval(t);
   }, [section, campaigns]);
+
+  // Charge le tableau des destinataires quand on choisit une liste / la newsletter.
+  useEffect(() => {
+    if (recipientMode === 'liste' && selectedSegmentId) {
+      const seg = segments.find((s: any) => s.id === selectedSegmentId);
+      if (!seg) { setRecipientRows([]); return; }
+      setLoadingRecips(true);
+      fetch('/api/admin/segments/preview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filters: seg.filters }) })
+        .then((r) => r.json())
+        .then((d) => { setRecipientRows((d?.clients ?? []).map((c: any) => ({ email: c.email, firstName: c.firstName, lastName: c.lastName, userId: c.id, lastVisit: c.lastVisit }))); setLoadingRecips(false); })
+        .catch(() => setLoadingRecips(false));
+    } else if (recipientMode === 'newsletter') {
+      setRecipientRows(newsletterSubs.map((s: any) => ({ email: s.email, firstName: '', lastName: '', userId: null, lastVisit: null })));
+    } else {
+      setRecipientRows([]);
+    }
+  }, [recipientMode, selectedSegmentId, newsletterSubs]);
+
+  const addRecipient = () => {
+    const em = addEmail.trim().toLowerCase();
+    if (!EMAIL_RE.test(em)) { toast.error('Email invalide'); return; }
+    if (recipientRows.some((r: any) => (r.email ?? '').toLowerCase() === em)) { toast.error('⚠️ Ce contact est déjà dans la liste'); return; }
+    setRecipientRows((prev) => [{ email: em, firstName: '', lastName: '', userId: null, lastVisit: null, added: true }, ...prev]);
+    setAddEmail('');
+    toast.success('Contact ajouté');
+  };
+  const removeRecipient = (email: string) => setRecipientRows((prev) => prev.filter((r: any) => r.email !== email));
+  const usesTable = recipientMode === 'liste' || recipientMode === 'newsletter';
 
   const exportNewsletterCsv = () => {
     const rows = [['email', 'liste', 'source', 'date'], ...newsletterSubs.map((s: any) => [s.email, s.list, s.source, new Date(s.createdAt).toLocaleString('fr-FR')])];
@@ -161,10 +196,17 @@ export default function EmailsTab({ clients }: { clients: any[] }) {
     if (!subject || !body) { toast.error('Sujet et contenu requis'); return; }
     let recipientIds: string[] = [];
     let rawEmails: string[] = [];
-    if (recipientMode === 'newsletter') {
-      rawEmails = newsletterSubs.map((s: any) => s.email).filter(Boolean);
-      if (rawEmails.length === 0) { toast.error('Liste newsletter vide'); return; }
-      if (!confirm(`Envoyer cet email à ${rawEmails.length} inscrit(e)s newsletter ?`)) return;
+    if (usesTable) {
+      // Liste / newsletter : on utilise le tableau édité (ordre de priorité conservé).
+      recipientIds = recipientRows.filter((r: any) => r.userId).map((r: any) => r.userId);
+      rawEmails = recipientRows.filter((r: any) => !r.userId).map((r: any) => r.email);
+      const total = recipientIds.length + rawEmails.length;
+      if (total === 0) { toast.error('Aucun destinataire dans la liste'); return; }
+      const days = Math.ceil(total / maxPerDay);
+      const msg = total > maxPerDay
+        ? `Envoyer à ${total} destinataires ? Pour protéger votre réputation, l'envoi sera étalé sur ${days} jour(s) (max ${maxPerDay}/jour), clientes les plus récentes d'abord.`
+        : `Envoyer cet email à ${total} destinataire(s) ?`;
+      if (!confirm(msg)) return;
     } else {
       if (recipientMode === 'single') {
         const client = clients.find((c: any) => (c?.email ?? '').toLowerCase() === singleEmail.toLowerCase());
@@ -172,12 +214,6 @@ export default function EmailsTab({ clients }: { clients: any[] }) {
         recipientIds = [client.id];
       } else if (recipientMode === 'selected') {
         recipientIds = selectedClientIds;
-      } else if (recipientMode === 'liste') {
-        const seg = segments.find((s: any) => s.id === selectedSegmentId);
-        if (!seg) { toast.error('Choisissez une liste'); return; }
-        const res = await fetch('/api/admin/segments/preview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filters: seg.filters }) });
-        const d = await res.json();
-        recipientIds = d?.ids ?? [];
       } else {
         recipientIds = clients.map((c: any) => c?.id).filter(Boolean);
       }
@@ -190,12 +226,14 @@ export default function EmailsTab({ clients }: { clients: any[] }) {
       const res = await fetch('/api/admin/email-send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ templateId: selectedTemplateId, subject, body, recipientIds, rawEmails }),
+        body: JSON.stringify({ templateId: selectedTemplateId, subject, body, recipientIds, rawEmails, maxPerDay }),
       });
       const data = await res.json();
       if (res.ok) {
         if (data.queued) {
-          toast.success(`Campagne mise en file : ${data.total} emails seront envoyés progressivement (par lots) pour protéger votre réputation.`);
+          toast.success(data.days > 1
+            ? `Campagne mise en file : ${data.total} emails étalés sur ${data.days} jour(s) (max ${data.maxPerDay}/j, clientes récentes d'abord).`
+            : `Campagne mise en file : ${data.total} emails envoyés progressivement pour protéger votre réputation.`);
           loadCampaigns(); setSection('history');
         } else {
           toast.success(`Envoyé : ${data.sent}/${data.total} (${data.skippedOptOut} désinscrit(s), ${data.failed} échec(s))`);
@@ -251,11 +289,60 @@ export default function EmailsTab({ clients }: { clients: any[] }) {
                     <option value="">Choisir une liste…</option>
                     {segments.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>}
-              <p className="text-[11px] text-[#3B312D]/40 mt-1">La liste est recalculée à l'envoi (clientes à jour selon les critères).</p>
+              <p className="text-[11px] text-[#3B312D]/40 mt-1">Les destinataires s'affichent ci-dessous — vous pouvez en retirer ou en ajouter avant l'envoi.</p>
             </div>
           )}
           {recipientMode === 'newsletter' && (
-            <p className="text-xs text-[#3B312D]/60">Envoi à la liste <strong>Ouverture Antibes</strong> — {newsletterSubs.length} inscrit(e)s (emails collectés par le pop-up, non-clients).</p>
+            <p className="text-xs text-[#3B312D]/60">Liste <strong>Ouverture Antibes</strong> — {newsletterSubs.length} inscrit(e)s (emails du pop-up, non-clients).</p>
+          )}
+
+          {/* Tableau des destinataires (liste / newsletter) : recherche, ajout, retrait */}
+          {usesTable && (
+            <div className="border border-[#F8F4EF] rounded-xl p-3 bg-[#F8F4EF]/30">
+              {loadingRecips ? (
+                <div className="flex items-center justify-center py-8"><Loader2 size={20} className="animate-spin text-[#C98F79]" /></div>
+              ) : (() => {
+                const q = recipSearch.trim().toLowerCase();
+                const filtered = q ? recipientRows.filter((r: any) => (r.email + ' ' + (r.firstName ?? '') + ' ' + (r.lastName ?? '')).toLowerCase().includes(q)) : recipientRows;
+                const total = recipientRows.length;
+                const days = Math.ceil(total / maxPerDay);
+                return (
+                  <>
+                    <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+                      <span className="text-sm font-medium text-[#3B312D]">{total} destinataire(s){q ? ` · ${filtered.length} affiché(s)` : ''}</span>
+                      {total > RECOMMENDED_MAX && <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">Grande liste — envoi étalé sur {days} j</span>}
+                    </div>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      <input value={recipSearch} onChange={(e: any) => setRecipSearch(e.target.value)} placeholder="Rechercher un email / nom…" className="flex-1 min-w-[160px] px-3 py-2 text-sm border border-[#F8F4EF] rounded-lg bg-white text-[#3B312D]" />
+                      <div className="flex gap-1">
+                        <input value={addEmail} onChange={(e: any) => setAddEmail(e.target.value)} onKeyDown={(e: any) => { if (e.key === 'Enter') { e.preventDefault(); addRecipient(); } }} placeholder="Ajouter un email" className="px-3 py-2 text-sm border border-[#F8F4EF] rounded-lg bg-white text-[#3B312D]" />
+                        <button onClick={addRecipient} className="px-3 py-2 bg-[#AAB7A0] text-white text-sm rounded-lg">Ajouter</button>
+                      </div>
+                    </div>
+                    <div className="max-h-56 overflow-y-auto bg-white rounded-lg border border-[#F8F4EF] divide-y divide-[#F8F4EF]">
+                      {filtered.length === 0 ? <p className="text-xs text-[#3B312D]/40 text-center py-6">Aucun destinataire.</p> : filtered.slice(0, 300).map((r: any) => (
+                        <div key={r.email} className="px-3 py-1.5 flex items-center justify-between gap-2 text-sm">
+                          <div className="min-w-0">
+                            <span className="text-[#3B312D] truncate">{(r.firstName || r.lastName) ? `${r.firstName ?? ''} ${r.lastName ?? ''}`.trim() + ' · ' : ''}{r.email}</span>
+                            {r.added && <span className="ml-1 text-[10px] text-[#AAB7A0]">(ajouté)</span>}
+                          </div>
+                          <div className="flex items-center gap-2 flex-none">
+                            {r.lastVisit && <span className="text-[10px] text-[#3B312D]/40 whitespace-nowrap">vu {new Date(r.lastVisit).toLocaleDateString('fr-FR')}</span>}
+                            <button onClick={() => removeRecipient(r.email)} className="p-1 rounded hover:bg-red-50" title="Retirer"><X size={13} className="text-red-400" /></button>
+                          </div>
+                        </div>
+                      ))}
+                      {filtered.length > 300 && <p className="text-[10px] text-[#3B312D]/40 text-center py-2">… {filtered.length - 300} autres (utilisez la recherche)</p>}
+                    </div>
+                    <div className="flex items-center gap-2 mt-2">
+                      <label className="text-xs text-[#3B312D]/60">Max par jour</label>
+                      <input type="number" min={20} max={2000} value={maxPerDay} onChange={(e: any) => setMaxPerDay(parseInt(e.target.value || '300') || 300)} className="w-24 px-2 py-1.5 text-sm border border-[#F8F4EF] rounded-lg bg-white text-[#3B312D]" />
+                      <span className="text-[11px] text-[#3B312D]/40">recommandé ≤ {RECOMMENDED_MAX}/jour (réputation). Au-delà : étalé sur plusieurs jours, prioritaire aux clientes récentes.</span>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
           )}
           {recipientMode === 'selected' && (
             <div className="max-h-40 overflow-y-auto border border-[#F8F4EF] rounded-lg p-2 space-y-1">

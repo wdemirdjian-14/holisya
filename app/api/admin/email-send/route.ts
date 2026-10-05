@@ -22,7 +22,10 @@ export async function POST(req: NextRequest) {
     if (!data?.subject || !data?.body) return NextResponse.json({ error: 'Sujet et contenu requis' }, { status: 400 });
 
     // Liste de destinataires unifiée (clientes + emails bruts), dédoublonnée, sans désinscrits.
-    const users = await prisma.user.findMany({ where: { id: { in: recipientIds } } });
+    // On préserve l'ordre de priorité envoyé par le client (recipientIds déjà triés).
+    const usersRaw = await prisma.user.findMany({ where: { id: { in: recipientIds } } });
+    const orderIndex = new Map(recipientIds.map((id, i) => [id, i]));
+    const users = usersRaw.sort((a, b) => (orderIndex.get(a.id) ?? 0) - (orderIndex.get(b.id) ?? 0));
     let skippedOptOut = 0;
     const seen = new Set<string>();
     const list: { email: string; firstName: string; lastName: string; userId: string | null }[] = [];
@@ -42,14 +45,21 @@ export async function POST(req: NextRequest) {
     }
     if (list.length === 0) return NextResponse.json({ error: 'Aucun destinataire valide' }, { status: 400 });
 
-    // Gros envoi → file d'attente traitée par lots (cron).
+    // Gros envoi → file d'attente étalée par priorité (cron).
     if (list.length > BATCH_THRESHOLD) {
+      const maxPerDay = Math.min(2000, Math.max(20, parseInt(data?.maxPerDay) || 400));
+      const now = new Date();
+      const nineAm = (dayOffset: number) => { const d = new Date(); d.setHours(9, 0, 0, 0); d.setDate(d.getDate() + dayOffset); return d; };
+      const days = Math.ceil(list.length / maxPerDay);
       const campaign = await prisma.emailCampaign.create({
         data: { subject: data.subject, body: data.body, templateId: data?.templateId ?? '', total: list.length, status: 'queued' },
       });
-      const items = list.map((r) => ({ campaignId: campaign.id, userId: r.userId, email: r.email, firstName: r.firstName, lastName: r.lastName }));
+      const items = list.map((r, idx) => {
+        const day = Math.floor(idx / maxPerDay);
+        return { campaignId: campaign.id, userId: r.userId, email: r.email, firstName: r.firstName, lastName: r.lastName, scheduledFor: day === 0 ? now : nineAm(day) };
+      });
       for (let i = 0; i < items.length; i += 1000) await prisma.emailQueueItem.createMany({ data: items.slice(i, i + 1000) });
-      return NextResponse.json({ queued: true, total: list.length, campaignId: campaign.id, skippedOptOut });
+      return NextResponse.json({ queued: true, total: list.length, campaignId: campaign.id, skippedOptOut, days, maxPerDay });
     }
 
     // Petit envoi → immédiat.

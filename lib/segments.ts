@@ -92,5 +92,12 @@ export async function computeSegment(filters: SegmentFilters): Promise<SegmentCl
       lastVisit: lastVisit ? lastVisit.toISOString() : null, apptCount, region, hasActiveSub,
     });
   }
+  // Tri par priorité : clientes venues le plus récemment d'abord, jamais venues en dernier.
+  out.sort((a, b) => {
+    if (a.lastVisit && b.lastVisit) return a.lastVisit < b.lastVisit ? 1 : -1;
+    if (a.lastVisit) return -1;
+    if (b.lastVisit) return 1;
+    return b.apptCount - a.apptCount;
+  });
   return out;
 }

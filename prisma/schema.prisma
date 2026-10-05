@@ -543,11 +543,13 @@ model EmailQueueItem {
   email       String
   firstName   String   @default("")
   lastName    String   @default("")
-  status      String   @default("pending") // pending | sent | failed
+  status      String   @default("pending") // pending | sent | failed | skipped
   error       String   @default("")
+  scheduledFor DateTime @default(now())
   sentAt      DateTime?
   createdAt   DateTime @default(now())
 
   @@index([status])
   @@index([campaignId])
+  @@index([scheduledFor])
 }
