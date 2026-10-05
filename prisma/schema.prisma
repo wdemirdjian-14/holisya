@@ -517,3 +517,37 @@ model NewsletterSubscriber {
   @@unique([email, list])
   @@index([list])
 }
+
+model EmailCampaign {
+  id          String   @id @default(cuid())
+  subject     String
+  body        String
+  templateId  String   @default("")
+  total       Int      @default(0)
+  sentCount   Int      @default(0)
+  failedCount Int      @default(0)
+  status      String   @default("queued") // queued | sending | done
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items EmailQueueItem[]
+
+  @@index([status])
+}
+
+model EmailQueueItem {
+  id          String   @id @default(cuid())
+  campaignId  String
+  campaign    EmailCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  userId      String?
+  email       String
+  firstName   String   @default("")
+  lastName    String   @default("")
+  status      String   @default("pending") // pending | sent | failed
+  error       String   @default("")
+  sentAt      DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([status])
+  @@index([campaignId])
+}

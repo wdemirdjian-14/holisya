@@ -234,6 +234,15 @@ export default function AdminDashboard() {
     }
   }, [showModal, modalData?.id]);
 
+  const sendActivation = async (id: string) => {
+    if (!id || !confirm("Envoyer un lien d'activation d'espace client à cette personne ?")) return;
+    try {
+      const res = await fetch('/api/admin/clients/activate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+      const d = await res.json();
+      if (res.ok) toast.success(`Lien d'activation envoyé à ${d.email}`); else toast.error(d?.error ?? 'Erreur');
+    } catch { toast.error('Erreur'); }
+  };
+
   const addPayment = async (appointmentId: string) => {
     if (!appointmentId || !newPayment?.amount) { toast.error('Montant requis'); return; }
     setSaving(true);
@@ -593,6 +602,9 @@ export default function AdminDashboard() {
                           <button onClick={() => { setCreditAmount(1); setModalData(c); setShowModal('manage-credits'); }} className="p-1.5 rounded hover:bg-[#AAB7A0]/10" title="Gérer crédits"><Euro size={14} className="text-[#AAB7A0]" /></button>
                           <button onClick={() => { setModalData({ ...c, notifMessage: '' }); setShowModal('notify-client'); }} className="p-1.5 rounded hover:bg-[#C98F79]/10" title="Notifier"><Bell size={14} className="text-[#C98F79]" /></button>
                           <button onClick={() => { setModalData(c); setShowModal('edit-client'); }} className="p-1.5 rounded hover:bg-[#C98F79]/10" title="Éditer"><Edit size={14} className="text-[#C98F79]" /></button>
+                          {(c?.source === 'planity' || c?.source === 'import') && (
+                            <button onClick={() => sendActivation(c?.id)} className="p-1.5 rounded hover:bg-[#AAB7A0]/10" title="Envoyer un lien d'activation d'espace"><Mail size={14} className="text-[#AAB7A0]" /></button>
+                          )}
                         </div>
                       </td>
                     </tr>

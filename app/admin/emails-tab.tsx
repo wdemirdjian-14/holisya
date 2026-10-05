@@ -12,6 +12,7 @@ const VARIABLES = [
 export default function EmailsTab({ clients }: { clients: any[] }) {
   const [section, setSection] = useState<'templates' | 'send' | 'history' | 'push' | 'lists' | 'newsletter'>('send');
   const [newsletterSubs, setNewsletterSubs] = useState<any[]>([]);
+  const [campaigns, setCampaigns] = useState<any[]>([]);
 
   const emptyFilters = { activity: 'any', minAppointments: 0, subscription: 'any', source: 'any', newAccount: 'any', region: 'any' };
   const [filters, setFilters] = useState<any>(emptyFilters);
@@ -64,8 +65,18 @@ export default function EmailsTab({ clients }: { clients: any[] }) {
 
   const loadSegments = () => fetch('/api/admin/segments').then(r => r.json()).then(d => setSegments(d?.segments ?? [])).catch(() => {});
   const loadNewsletter = () => fetch('/api/admin/newsletter?list=antibes').then(r => r.json()).then(d => setNewsletterSubs(d?.subscribers ?? [])).catch(() => {});
+  const loadCampaigns = () => fetch('/api/admin/campaigns').then(r => r.json()).then(d => setCampaigns(d?.campaigns ?? [])).catch(() => {});
 
-  useEffect(() => { load(); loadPush(); loadSegments(); loadNewsletter(); }, []);
+  useEffect(() => { load(); loadPush(); loadSegments(); loadNewsletter(); loadCampaigns(); }, []);
+
+  // Rafraîchit la progression des campagnes tant qu'il y en a en cours (dans l'onglet Historique).
+  useEffect(() => {
+    if (section !== 'history') return;
+    const hasActive = campaigns.some((c: any) => c.status !== 'done');
+    if (!hasActive) return;
+    const t = setInterval(loadCampaigns, 15000);
+    return () => clearInterval(t);
+  }, [section, campaigns]);
 
   const exportNewsletterCsv = () => {
     const rows = [['email', 'liste', 'source', 'date'], ...newsletterSubs.map((s: any) => [s.email, s.list, s.source, new Date(s.createdAt).toLocaleString('fr-FR')])];
@@ -183,7 +194,12 @@ export default function EmailsTab({ clients }: { clients: any[] }) {
       });
       const data = await res.json();
       if (res.ok) {
-        toast.success(`Envoyé : ${data.sent}/${data.total} (${data.skippedOptOut} désinscrit(s), ${data.failed} échec(s))`);
+        if (data.queued) {
+          toast.success(`Campagne mise en file : ${data.total} emails seront envoyés progressivement (par lots) pour protéger votre réputation.`);
+          loadCampaigns(); setSection('history');
+        } else {
+          toast.success(`Envoyé : ${data.sent}/${data.total} (${data.skippedOptOut} désinscrit(s), ${data.failed} échec(s))`);
+        }
         load();
       } else toast.error(data?.error ?? 'Erreur envoi');
     } catch { toast.error('Erreur envoi'); }
@@ -451,6 +467,29 @@ export default function EmailsTab({ clients }: { clients: any[] }) {
       )}
 
       {section === 'history' && (
+        <div className="space-y-6">
+          {campaigns.length > 0 && (
+            <div className="bg-white rounded-xl shadow-sm p-5">
+              <h3 className="text-sm font-semibold text-[#3B312D] mb-3">Campagnes (envoi par lots)</h3>
+              <div className="space-y-3">
+                {campaigns.map((c: any) => {
+                  const done = (c.sentCount ?? 0) + (c.failedCount ?? 0);
+                  const pct = c.total ? Math.round((done / c.total) * 100) : 0;
+                  return (
+                    <div key={c.id} className="border border-[#F8F4EF] rounded-lg p-3">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <p className="text-sm font-medium text-[#3B312D] truncate">{c.subject}</p>
+                        <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${c.status === 'done' ? 'bg-[#AAB7A0]/20 text-[#AAB7A0]' : 'bg-[#C98F79]/15 text-[#C98F79]'}`}>{c.status === 'done' ? 'Terminée' : c.status === 'sending' ? 'En cours…' : 'En file'}</span>
+                      </div>
+                      <div className="mt-2 h-2 bg-[#F8F4EF] rounded-full overflow-hidden"><div className="h-full bg-[#C98F79]" style={{ width: `${pct}%` }} /></div>
+                      <p className="text-[11px] text-[#3B312D]/50 mt-1">{c.sentCount ?? 0} envoyé(s){c.failedCount ? ` · ${c.failedCount} échec(s)` : ''} sur {c.total} · {pct}%</p>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-[#3B312D]/40 mt-3">Les grandes campagnes sont envoyées progressivement (≈ 50 emails toutes les 5 min) pour protéger la délivrabilité et votre IP. La progression se met à jour automatiquement.</p>
+            </div>
+          )}
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -473,6 +512,7 @@ export default function EmailsTab({ clients }: { clients: any[] }) {
               </tbody>
             </table>
           </div>
+        </div>
         </div>
       )}
 
