@@ -8,7 +8,7 @@ export default async function Footer() {
   return (
     <footer className="bg-[#3B312D] text-white/80">
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8">
           <div>
             <img src="/images/logo-holisya.png" alt="Holisya" className="h-10 w-auto brightness-0 invert mb-3" />
             <p className="text-sm leading-relaxed text-white/60">{content['footer.description']}</p>
@@ -32,6 +32,16 @@ export default async function Footer() {
               <Link href="/cartes-cadeaux" className="block text-sm hover:text-[#C98F79] transition-colors">Cartes Cadeaux</Link>
               <Link href="/a-propos" className="block text-sm hover:text-[#C98F79] transition-colors">À Propos</Link>
               <Link href="/contact" className="block text-sm hover:text-[#C98F79] transition-colors">Contact</Link>
+            </div>
+          </div>
+          <div>
+            <h4 className="font-playfair text-lg font-semibold text-white mb-3">Nos spécialités</h4>
+            <div className="space-y-2">
+              <Link href="/massage-kobido-boulogne-billancourt" className="block text-sm hover:text-[#C98F79] transition-colors">Massage Kobido Boulogne</Link>
+              <Link href="/massage-kobido-paris" className="block text-sm hover:text-[#C98F79] transition-colors">Massage Kobido Paris</Link>
+              <Link href="/drainage-lymphatique-boulogne-billancourt" className="block text-sm hover:text-[#C98F79] transition-colors">Drainage lymphatique</Link>
+              <Link href="/maderotherapie-boulogne-billancourt" className="block text-sm hover:text-[#C98F79] transition-colors">Madérothérapie</Link>
+              <Link href="/coaching-nutrition-boulogne-billancourt" className="block text-sm hover:text-[#C98F79] transition-colors">Coaching nutrition</Link>
             </div>
           </div>
           <div>

@@ -13,10 +13,12 @@ export type LocalLandingProps = {
   locationNote: string;       // phrase sur l'accès / la proximité
   reasons: { title: string; text: string }[];
   faq: { q: string; a: string }[];
+  serviceType?: string;       // type de service pour le balisage schema.org
 };
 
 export default function LocalLanding(props: LocalLandingProps) {
   const { path, city, eyebrow, h1, intro, locationNote, reasons, faq } = props;
+  const serviceType = props.serviceType ?? 'Massage du visage Kobido';
   const url = `${SITE_URL}${path}`;
 
   const jsonLd = {
@@ -25,7 +27,7 @@ export default function LocalLanding(props: LocalLandingProps) {
       {
         '@type': 'Service',
         name: h1,
-        serviceType: 'Massage du visage Kobido',
+        serviceType,
         areaServed: { '@type': 'City', name: city },
         provider: { '@id': `${SITE_URL}/#business` },
         url,

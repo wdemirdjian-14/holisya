@@ -26,9 +26,9 @@ export const viewport = {
 export async function generateMetadata() {
   const siteUrl = process.env.NEXTAUTH_URL ?? 'https://holisya.fr';
   const override = await getMetaOverride('/'); // titre/description éditables en admin (page d'accueil)
-  const defaultTitle = override.title || 'Holisya | Massage Kobido & bien-être à Boulogne-Billancourt et Paris';
+  const defaultTitle = override.title || 'Massage & Kobido à Boulogne-Billancourt (92) | Holisya';
   const defaultDescription = override.description ||
-    "Institut de bien-être féminin à Boulogne-Billancourt (92), aux portes de Paris. Massage du visage Kobido, drainage lymphatique, Madero Sculpt et coaching nutrition. Réservez votre soin en ligne.";
+    "Institut de massage à Boulogne-Billancourt (92), aux portes de Paris : Kobido (lifting naturel), drainage lymphatique et soin du visage. Noté 5,0 ★. Réservez en ligne 7j/7.";
   return {
     metadataBase: new URL(siteUrl),
     title: {

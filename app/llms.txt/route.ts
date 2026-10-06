@@ -30,6 +30,9 @@ export async function GET() {
 - [Prendre rendez-vous](${SITE_URL}/rendez-vous) : réservation en ligne d'un créneau.
 - [Massage Kobido à Boulogne-Billancourt](${SITE_URL}/massage-kobido-boulogne-billancourt)
 - [Massage Kobido à Paris](${SITE_URL}/massage-kobido-paris)
+- [Drainage lymphatique à Boulogne-Billancourt](${SITE_URL}/drainage-lymphatique-boulogne-billancourt)
+- [Madérothérapie (Madero Sculpt) à Boulogne-Billancourt](${SITE_URL}/maderotherapie-boulogne-billancourt)
+- [Coaching nutrition à Boulogne-Billancourt](${SITE_URL}/coaching-nutrition-boulogne-billancourt)
 - [Cartes cadeaux](${SITE_URL}/cartes-cadeaux)
 - [Blog bien-être](${SITE_URL}/blog) : conseils Kobido, self-care, drainage, nutrition.
 - [Témoignages](${SITE_URL}/temoignages)
