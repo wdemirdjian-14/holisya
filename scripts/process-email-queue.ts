@@ -13,8 +13,16 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 async function main() {
   const appUrl = process.env.NEXTAUTH_URL ?? 'https://www.holisya.fr';
 
+  // Plage horaire d'envoi (réglable en admin) : on n'envoie qu'entre start et end.
+  const settings = await prisma.bookingSettings.findUnique({ where: { id: 'global' } }).catch(() => null);
+  const wStart = (settings as any)?.emailWindowStart ?? 8;
+  const wEnd = (settings as any)?.emailWindowEnd ?? 21;
+  const hour = new Date().getHours();
+  if (hour < wStart || hour >= wEnd) { console.log(`[email-queue] hors plage horaire (${wStart}h–${wEnd}h), il est ${hour}h`); return; }
+
+  // On ignore les campagnes en pause / annulées.
   const items = await prisma.emailQueueItem.findMany({
-    where: { status: 'pending', scheduledFor: { lte: new Date() } },
+    where: { status: 'pending', scheduledFor: { lte: new Date() }, campaign: { status: { in: ['queued', 'sending'] } } },
     orderBy: { scheduledFor: 'asc' },
     take: BATCH_PER_RUN,
     include: { campaign: true },
@@ -33,8 +41,10 @@ async function main() {
     // Désinscription (token client si disponible).
     let unsubscribeUrl = `${appUrl}/desinscription`;
     let optedOut = false;
+    let prevNotes = '';
     if (it.userId) {
-      const u = await prisma.user.findUnique({ where: { id: it.userId }, select: { emailOptOut: true, unsubscribeToken: true } });
+      const u = await prisma.user.findUnique({ where: { id: it.userId }, select: { emailOptOut: true, unsubscribeToken: true, privateNotes: true } });
+      prevNotes = u?.privateNotes ?? '';
       if (u?.emailOptOut) optedOut = true;
       else {
         let token = u?.unsubscribeToken;
@@ -57,6 +67,13 @@ async function main() {
     await prisma.emailQueueItem.update({ where: { id: it.id }, data: { status: success ? 'sent' : 'failed', error: success ? '' : 'Échec SMTP', sentAt: new Date() } });
     await prisma.emailCampaign.update({ where: { id: it.campaignId }, data: success ? { sentCount: { increment: 1 } } : { failedCount: { increment: 1 } } });
     await prisma.emailLog.create({ data: { recipientEmail: it.email, recipientName: `${it.firstName ?? ''} ${it.lastName ?? ''}`.trim(), subject, templateId: camp.templateId ?? '', status: success ? 'SENT' : 'FAILED', error: success ? '' : 'Échec envoi SMTP' } });
+
+    // En cas d'échec, on note l'adresse en échec dans la fiche cliente.
+    if (!success && it.userId) {
+      const note = `⚠️ Email en échec le ${new Date().toLocaleDateString('fr-FR')}`;
+      const newNotes = prevNotes.includes('Email en échec') ? prevNotes : (prevNotes ? `${prevNotes} | ${note}` : note);
+      await prisma.user.update({ where: { id: it.userId }, data: { emailBounced: true, privateNotes: newNotes } }).catch(() => {});
+    }
 
     if (success) sent += 1; else failed += 1;
     await sleep(DELAY_MS);

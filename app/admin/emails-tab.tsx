@@ -13,6 +13,8 @@ export default function EmailsTab({ clients }: { clients: any[] }) {
   const [section, setSection] = useState<'templates' | 'send' | 'history' | 'push' | 'lists' | 'newsletter'>('send');
   const [newsletterSubs, setNewsletterSubs] = useState<any[]>([]);
   const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [campaignDetail, setCampaignDetail] = useState<any>(null);
+  const [emailWindow, setEmailWindow] = useState({ start: 8, end: 21 });
 
   const emptyFilters = { activity: 'any', minAppointments: 0, subscription: 'any', source: 'any', newAccount: 'any', region: 'any' };
   const [filters, setFilters] = useState<any>(emptyFilters);
@@ -75,8 +77,21 @@ export default function EmailsTab({ clients }: { clients: any[] }) {
   const loadSegments = () => fetch('/api/admin/segments').then(r => r.json()).then(d => setSegments(d?.segments ?? [])).catch(() => {});
   const loadNewsletter = () => fetch('/api/admin/newsletter?list=antibes').then(r => r.json()).then(d => setNewsletterSubs(d?.subscribers ?? [])).catch(() => {});
   const loadCampaigns = () => fetch('/api/admin/campaigns').then(r => r.json()).then(d => setCampaigns(d?.campaigns ?? [])).catch(() => {});
+  const loadWindow = () => fetch('/api/admin/booking-settings').then(r => r.json()).then(d => { if (d?.settings) setEmailWindow({ start: d.settings.emailWindowStart ?? 8, end: d.settings.emailWindowEnd ?? 21 }); }).catch(() => {});
 
-  useEffect(() => { load(); loadPush(); loadSegments(); loadNewsletter(); loadCampaigns(); }, []);
+  useEffect(() => { load(); loadPush(); loadSegments(); loadNewsletter(); loadCampaigns(); loadWindow(); }, []);
+
+  const openCampaign = (id: string) => fetch(`/api/admin/campaigns/${id}`).then(r => r.json()).then(setCampaignDetail).catch(() => {});
+  const campaignAction = async (id: string, action: 'pause' | 'resume' | 'cancel') => {
+    if (action === 'cancel' && !confirm("Annuler l'envoi des emails restants de cette campagne ?")) return;
+    const res = await fetch('/api/admin/campaigns', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, action }) });
+    if (res.ok) { toast.success(action === 'pause' ? 'Campagne en pause' : action === 'resume' ? 'Campagne reprise' : 'Campagne annulée'); loadCampaigns(); openCampaign(id); } else toast.error('Erreur');
+  };
+  const saveWindow = async (w: { start: number; end: number }) => {
+    setEmailWindow(w);
+    await fetch('/api/admin/booking-settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ emailWindowStart: w.start, emailWindowEnd: w.end }) }).catch(() => {});
+    toast.success('Plage horaire enregistrée');
+  };
 
   // Rafraîchit la progression des campagnes tant qu'il y en a en cours (dans l'onglet Historique).
   useEffect(() => {
@@ -557,28 +572,38 @@ export default function EmailsTab({ clients }: { clients: any[] }) {
 
       {section === 'history' && (
         <div className="space-y-6">
-          {campaigns.length > 0 && (
-            <div className="bg-white rounded-xl shadow-sm p-5">
-              <h3 className="text-sm font-semibold text-[#3B312D] mb-3">Campagnes (envoi par lots)</h3>
+          <div className="bg-white rounded-xl shadow-sm p-5">
+            <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+              <h3 className="text-sm font-semibold text-[#3B312D]">Campagnes (envoi par lots)</h3>
+              <div className="flex items-center gap-1.5 text-xs text-[#3B312D]/60">
+                <span>Plage d'envoi</span>
+                <select value={emailWindow.start} onChange={(e: any) => saveWindow({ ...emailWindow, start: parseInt(e.target.value) })} className="px-2 py-1 border border-[#F8F4EF] rounded-lg bg-[#F8F4EF]/50">{Array.from({ length: 24 }, (_, h) => <option key={h} value={h}>{h}h</option>)}</select>
+                <span>→</span>
+                <select value={emailWindow.end} onChange={(e: any) => saveWindow({ ...emailWindow, end: parseInt(e.target.value) })} className="px-2 py-1 border border-[#F8F4EF] rounded-lg bg-[#F8F4EF]/50">{Array.from({ length: 24 }, (_, h) => <option key={h} value={h}>{h}h</option>)}</select>
+              </div>
+            </div>
+            {campaigns.length === 0 ? (
+              <p className="text-sm text-[#3B312D]/40 py-4 text-center">Aucune campagne par lots pour l'instant.</p>
+            ) : (
               <div className="space-y-3">
                 {campaigns.map((c: any) => {
                   const done = (c.sentCount ?? 0) + (c.failedCount ?? 0);
                   const pct = c.total ? Math.round((done / c.total) * 100) : 0;
                   return (
-                    <div key={c.id} className="border border-[#F8F4EF] rounded-lg p-3">
+                    <button key={c.id} onClick={() => openCampaign(c.id)} className="w-full text-left border border-[#F8F4EF] rounded-lg p-3 hover:border-[#C98F79]/40 transition-colors">
                       <div className="flex items-center justify-between gap-2 flex-wrap">
                         <p className="text-sm font-medium text-[#3B312D] truncate">{c.subject}</p>
-                        <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${c.status === 'done' ? 'bg-[#AAB7A0]/20 text-[#AAB7A0]' : 'bg-[#C98F79]/15 text-[#C98F79]'}`}>{c.status === 'done' ? 'Terminée' : c.status === 'sending' ? 'En cours…' : 'En file'}</span>
+                        <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${c.status === 'done' ? 'bg-[#AAB7A0]/20 text-[#AAB7A0]' : c.status === 'paused' ? 'bg-amber-100 text-amber-700' : 'bg-[#C98F79]/15 text-[#C98F79]'}`}>{c.status === 'done' ? 'Terminée' : c.status === 'paused' ? 'En pause' : c.status === 'sending' ? 'En cours…' : 'En file'}</span>
                       </div>
                       <div className="mt-2 h-2 bg-[#F8F4EF] rounded-full overflow-hidden"><div className="h-full bg-[#C98F79]" style={{ width: `${pct}%` }} /></div>
-                      <p className="text-[11px] text-[#3B312D]/50 mt-1">{c.sentCount ?? 0} envoyé(s){c.failedCount ? ` · ${c.failedCount} échec(s)` : ''} sur {c.total} · {pct}%</p>
-                    </div>
+                      <p className="text-[11px] text-[#3B312D]/50 mt-1">{c.sentCount ?? 0} envoyé(s){c.failedCount ? ` · ${c.failedCount} échec(s)` : ''} sur {c.total} · {pct}% · cliquez pour gérer</p>
+                    </button>
                   );
                 })}
               </div>
-              <p className="text-[10px] text-[#3B312D]/40 mt-3">Les grandes campagnes sont envoyées progressivement (≈ 50 emails toutes les 5 min) pour protéger la délivrabilité et votre IP. La progression se met à jour automatiquement.</p>
-            </div>
-          )}
+            )}
+            <p className="text-[10px] text-[#3B312D]/40 mt-3">Envoi étalé (≈ 50 emails / 5 min, uniquement dans la plage horaire). Cliquez une campagne pour la mettre en pause, l'annuler et voir les échecs.</p>
+          </div>
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -627,6 +652,65 @@ export default function EmailsTab({ clients }: { clients: any[] }) {
           </div>
         </div>
       )}
+
+      {campaignDetail?.campaign && (() => {
+        const c = campaignDetail.campaign;
+        const n = campaignDetail.counts ?? {};
+        const total = c.total ?? ((n.pending ?? 0) + (n.sent ?? 0) + (n.failed ?? 0) + (n.skipped ?? 0));
+        const done = (n.sent ?? 0) + (n.failed ?? 0);
+        const pct = total ? Math.round((done / total) * 100) : 0;
+        const next = campaignDetail.nextScheduled ? new Date(campaignDetail.nextScheduled) : null;
+        const failedList: string[] = campaignDetail.failedList ?? [];
+        return (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setCampaignDetail(null)}>
+            <div className="bg-white rounded-2xl p-6 w-full max-w-lg max-h-[85vh] overflow-y-auto" onClick={(e: any) => e.stopPropagation()}>
+              <div className="flex items-start justify-between gap-3 mb-4">
+                <div>
+                  <h3 className="font-playfair text-lg font-semibold text-[#3B312D]">{c.subject}</h3>
+                  <span className={`inline-block mt-1 text-[11px] px-2 py-0.5 rounded-full font-medium ${c.status === 'done' ? 'bg-[#AAB7A0]/20 text-[#AAB7A0]' : c.status === 'paused' ? 'bg-amber-100 text-amber-700' : 'bg-[#C98F79]/15 text-[#C98F79]'}`}>{c.status === 'done' ? 'Terminée' : c.status === 'paused' ? 'En pause' : c.status === 'sending' ? 'En cours…' : 'En file'}</span>
+                </div>
+                <button onClick={() => setCampaignDetail(null)} className="p-1.5 rounded hover:bg-[#F8F4EF]"><X size={18} /></button>
+              </div>
+
+              <div className="h-2.5 bg-[#F8F4EF] rounded-full overflow-hidden mb-2"><div className="h-full bg-[#C98F79]" style={{ width: `${pct}%` }} /></div>
+              <p className="text-xs text-[#3B312D]/60 mb-4">{done} / {total} traité(s) · {pct}%</p>
+
+              <div className="grid grid-cols-4 gap-2 text-center mb-4">
+                <div className="bg-[#F8F4EF]/60 rounded-lg py-2"><p className="text-base font-semibold text-[#AAB7A0]">{n.sent ?? 0}</p><p className="text-[10px] text-[#3B312D]/50">Envoyés</p></div>
+                <div className="bg-[#F8F4EF]/60 rounded-lg py-2"><p className="text-base font-semibold text-[#3B312D]">{n.pending ?? 0}</p><p className="text-[10px] text-[#3B312D]/50">En attente</p></div>
+                <div className="bg-[#F8F4EF]/60 rounded-lg py-2"><p className="text-base font-semibold text-[#C98F79]">{n.failed ?? 0}</p><p className="text-[10px] text-[#3B312D]/50">Échecs</p></div>
+                <div className="bg-[#F8F4EF]/60 rounded-lg py-2"><p className="text-base font-semibold text-[#3B312D]/40">{n.skipped ?? 0}</p><p className="text-[10px] text-[#3B312D]/50">Ignorés</p></div>
+              </div>
+
+              {next && (n.pending ?? 0) > 0 && (
+                <p className="text-xs text-[#3B312D]/60 mb-4">Prochain envoi prévu : <span className="font-medium text-[#3B312D]">{next.toLocaleString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span></p>
+              )}
+
+              <div className="flex gap-2 mb-4">
+                {(c.status === 'sending' || c.status === 'queued') && (
+                  <button onClick={() => campaignAction(c.id, 'pause')} className="flex-1 py-2.5 text-sm font-medium rounded-lg bg-amber-100 text-amber-700 hover:bg-amber-200">Mettre en pause</button>
+                )}
+                {c.status === 'paused' && (
+                  <button onClick={() => campaignAction(c.id, 'resume')} className="flex-1 py-2.5 text-sm font-medium rounded-lg bg-[#AAB7A0]/20 text-[#AAB7A0] hover:bg-[#AAB7A0]/30">Reprendre</button>
+                )}
+                {c.status !== 'done' && (
+                  <button onClick={() => { if (confirm('Annuler définitivement les envois restants de cette campagne ?')) campaignAction(c.id, 'cancel'); }} className="flex-1 py-2.5 text-sm font-medium rounded-lg bg-[#C98F79]/10 text-[#C98F79] hover:bg-[#C98F79]/20">Annuler les restants</button>
+                )}
+              </div>
+
+              {failedList.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-[#3B312D]/70 mb-1">Adresses en échec ({failedList.length}{failedList.length >= 100 ? '+' : ''})</p>
+                  <div className="max-h-40 overflow-y-auto bg-[#F8F4EF]/40 rounded-lg p-2 text-[11px] text-[#3B312D]/60 space-y-0.5">
+                    {failedList.map((e, i) => <p key={i} className="truncate">{e}</p>)}
+                  </div>
+                  <p className="text-[10px] text-[#3B312D]/40 mt-1">Ces contacts sont marqués « email en échec » dans leur fiche.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

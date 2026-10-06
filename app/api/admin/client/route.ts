@@ -45,7 +45,10 @@ export async function PUT(req: NextRequest) {
     if (!session?.user || (session.user as any)?.role !== 'ADMIN') return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
     const data = await req.json();
     if (!data?.id) return NextResponse.json({ error: 'ID requis' }, { status: 400 });
-    await prisma.user.update({ where: { id: data.id }, data: { privateNotes: data?.privateNotes ?? '' } });
+    const upd: any = {};
+    if (data?.privateNotes !== undefined) upd.privateNotes = data.privateNotes ?? '';
+    if (data?.emailBounced !== undefined) upd.emailBounced = !!data.emailBounced;
+    await prisma.user.update({ where: { id: data.id }, data: upd });
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('Update client notes error:', error);

@@ -591,6 +591,7 @@ export default function AdminDashboard() {
                         {c?.firstName ?? ''} {c?.lastName ?? ''}
                         {c?.source === 'import' && c?.resetToken && <span className="ml-2 text-[10px] px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded-full font-medium align-middle">Invitation en attente</span>}
                         {c?.source === 'planity' && <span className="ml-2 text-[10px] px-1.5 py-0.5 bg-[#C98F79]/15 text-[#C98F79] rounded-full font-medium align-middle">Planity</span>}
+                        {c?.emailBounced && <span className="ml-2 text-[10px] px-1.5 py-0.5 bg-red-100 text-red-700 rounded-full font-medium align-middle" title="Un email n'a pas pu être délivré à cette adresse">✉ Email en échec</span>}
                       </td>
                       <td className="px-4 py-3 text-[#3B312D]/60">{c?.email ?? ''}</td>
                       <td className="px-4 py-3 text-[#3B312D]/60">{c?.phone ?? '-'}</td>

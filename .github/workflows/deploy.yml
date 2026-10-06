@@ -33,7 +33,7 @@ jobs:
           rsync -az --delete \
             --exclude '.git' --exclude '.github' \
             --exclude 'node_modules' --exclude '.next' --exclude 'tsconfig.tsbuildinfo' \
-            --exclude '.env' --exclude 'public/uploads' --exclude 'private-media' \
+            --exclude '.env' --exclude 'public/uploads' --exclude 'private-media' --exclude 'logs' \
             -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new" \
             ./ "$VPS_USER@$VPS_HOST:~/holisya/"
 
@@ -42,6 +42,7 @@ jobs:
           TAG="${GITHUB_REF_NAME}"
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new "$VPS_USER@$VPS_HOST" \
             "cd ~/holisya \
+             && mkdir -p logs \
              && npm install --no-audit --no-fund --legacy-peer-deps \
              && npx prisma generate \
              && npx prisma db push --accept-data-loss \

@@ -27,6 +27,13 @@ export default function ClientDetail({ clientId, onClose }: { clientId: string; 
     setSavingNotes(false);
   };
 
+  const clearBounce = async () => {
+    try {
+      const res = await fetch('/api/admin/client', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: clientId, emailBounced: false }) });
+      if (res.ok) { toast.success('Alerte email levée'); setData((d: any) => ({ ...d, client: { ...d.client, emailBounced: false } })); } else toast.error('Erreur');
+    } catch { toast.error('Erreur'); }
+  };
+
   const c = data?.client;
   const stats = data?.stats;
 
@@ -61,6 +68,16 @@ export default function ClientDetail({ clientId, onClose }: { clientId: string; 
                 <span className="flex items-center gap-1"><Award size={12} className="text-[#C98F79]" />{c.loyaltyPoints ?? 0} points fidélité</span>
               </div>
             </div>
+
+            {c.emailBounced && (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start justify-between gap-3">
+                <div className="flex items-start gap-2 text-sm text-red-700">
+                  <Mail size={16} className="mt-0.5 shrink-0" />
+                  <span>Un email n'a pas pu être délivré à cette adresse. Vérifiez l'adresse ou contactez le client autrement.</span>
+                </div>
+                <button onClick={clearBounce} className="text-xs px-2.5 py-1.5 bg-white border border-red-200 text-red-600 rounded-lg shrink-0 hover:bg-red-100">Marquer résolu</button>
+              </div>
+            )}
 
             {/* Notes privées */}
             <div className="bg-white rounded-xl p-5">

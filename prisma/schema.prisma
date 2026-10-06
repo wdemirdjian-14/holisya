@@ -51,6 +51,7 @@ model User {
   resetTokenExpiry DateTime?
   source         String    @default("signup")
   emailOptOut    Boolean   @default(false)
+  emailBounced   Boolean   @default(false)
   unsubscribeToken String? @unique
   privateNotes   String    @default("")
   loyaltyPoints  Int       @default(0)
@@ -473,6 +474,8 @@ model BookingSettings {
   id                   String   @id @default("global")
   onlineBookingEnabled Boolean  @default(false)
   subscriptionsEnabled Boolean  @default(false)
+  emailWindowStart     Int      @default(8)
+  emailWindowEnd       Int      @default(21)
   requireCardImprint   Boolean  @default(false)
   autoConfirm          Boolean  @default(false)
   slotGranularityMin   Int      @default(15)
