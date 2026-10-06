@@ -4,7 +4,15 @@ import AboutClient from './about-client';
 import { getSiteContentMap } from '@/lib/site-content';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'À Propos' };
+import { withSeoOverride } from '@/lib/seo/meta';
+
+export async function generateMetadata() {
+  return withSeoOverride('/a-propos', {
+    title: 'À Propos',
+    description: "Découvrez Holisya et sa fondatrice Lamyae : une approche holistique du bien-être féminin à Boulogne-Billancourt, entre Kobido japonais, drainage lymphatique et nutrition.",
+    alternates: { canonical: '/a-propos' },
+  });
+}
 
 export default async function AboutPage() {
   const content = await getSiteContentMap([

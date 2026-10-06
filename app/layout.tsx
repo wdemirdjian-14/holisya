@@ -12,6 +12,7 @@ import ScrollFlower from '@/components/scroll-flower';
 import Analytics from '@/components/analytics';
 import CookieConsent from '@/components/cookie-consent';
 import { getSeoSettings } from '@/lib/seo/settings';
+import { getMetaOverride } from '@/lib/seo/meta';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,14 +25,17 @@ export const viewport = {
 
 export async function generateMetadata() {
   const siteUrl = process.env.NEXTAUTH_URL ?? 'https://holisya.fr';
+  const override = await getMetaOverride('/'); // titre/description éditables en admin (page d'accueil)
+  const defaultTitle = override.title || 'Holisya | Massage Kobido & bien-être à Boulogne-Billancourt et Paris';
+  const defaultDescription = override.description ||
+    "Institut de bien-être féminin à Boulogne-Billancourt (92), aux portes de Paris. Massage du visage Kobido, drainage lymphatique, Madero Sculpt et coaching nutrition. Réservez votre soin en ligne.";
   return {
     metadataBase: new URL(siteUrl),
     title: {
-      default: 'Holisya | Massage Kobido & bien-être à Boulogne-Billancourt et Paris',
+      default: defaultTitle,
       template: '%s | Holisya Boulogne-Billancourt',
     },
-    description:
-      "Institut de bien-être féminin à Boulogne-Billancourt (92), aux portes de Paris. Massage du visage Kobido, drainage lymphatique, Madero Sculpt et coaching nutrition. Réservez votre soin en ligne.",
+    description: defaultDescription,
     keywords: [
       'massage Kobido Boulogne-Billancourt', 'massage Kobido Paris', 'massage visage Boulogne',
       'drainage lymphatique Boulogne-Billancourt', 'lifting naturel visage Paris',
@@ -46,9 +50,8 @@ export async function generateMetadata() {
       apple: '/icons/apple-touch-icon.png',
     },
     openGraph: {
-      title: 'Holisya | Massage Kobido & bien-être à Boulogne-Billancourt et Paris',
-      description:
-        "Institut de bien-être féminin à Boulogne-Billancourt, aux portes de Paris. Kobido, drainage lymphatique, nutrition. Réservez en ligne.",
+      title: defaultTitle,
+      description: defaultDescription,
       url: siteUrl,
       siteName: 'Holisya',
       locale: 'fr_FR',

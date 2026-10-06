@@ -4,7 +4,15 @@ import BlogClient from './blog-client';
 import { prisma } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Blog' };
+import { withSeoOverride } from '@/lib/seo/meta';
+
+export async function generateMetadata() {
+  return withSeoOverride('/blog', {
+    title: 'Blog bien-être',
+    description: "Conseils bien-être Holisya : Kobido et lifting naturel, self-care, drainage lymphatique, nutrition. Nos articles pour prendre soin de vous à Boulogne-Billancourt et Paris.",
+    alternates: { canonical: '/blog' },
+  });
+}
 
 export default async function BlogPage() {
   let posts: any[] = [];

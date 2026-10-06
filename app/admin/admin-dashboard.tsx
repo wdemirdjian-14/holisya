@@ -20,6 +20,7 @@ const VideosTab = dynamic(() => import('./videos-tab'), { ssr: false, loading: (
 const PlanityTasks = dynamic(() => import('./planity-tasks'), { ssr: false });
 const BookingTab = dynamic(() => import('./booking-tab'), { ssr: false, loading: () => <div className="h-64 bg-white rounded-xl animate-pulse" /> });
 const SiteContentTab = dynamic(() => import('./site-content-tab'), { ssr: false, loading: () => <div className="h-64 bg-white rounded-xl animate-pulse" /> });
+const SeoTab = dynamic(() => import('./seo-tab'), { ssr: false, loading: () => <div className="h-64 bg-white rounded-xl animate-pulse" /> });
 const AgendaCalendar = dynamic(() => import('./agenda-calendar'), { ssr: false, loading: () => <div className="h-64 bg-white rounded-xl animate-pulse" /> });
 const SubscriptionsToggle = dynamic(() => import('./subscriptions-toggle'), { ssr: false });
 const ImageCropModal = dynamic(() => import('@/components/image-crop-modal'), { ssr: false });
@@ -37,7 +38,7 @@ function toLocalInputValue(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-type Tab = 'overview' | 'caisse' | 'clients' | 'appointments' | 'booking' | 'giftcards' | 'subscriptions' | 'promos' | 'blog' | 'contacts' | 'testimonials' | 'services' | 'videos' | 'emails' | 'gallery' | 'content';
+type Tab = 'overview' | 'caisse' | 'clients' | 'appointments' | 'booking' | 'giftcards' | 'subscriptions' | 'promos' | 'blog' | 'contacts' | 'testimonials' | 'services' | 'videos' | 'emails' | 'gallery' | 'content' | 'seo';
 
 export default function AdminDashboard() {
   const { data: session, status } = useSession() || {};
@@ -294,6 +295,7 @@ export default function AdminDashboard() {
 
   const tabs: { id: Tab; label: string; icon: any }[] = [
     { id: 'overview', label: 'Vue d\'ensemble', icon: LayoutDashboard },
+    { id: 'seo', label: 'Référencement & Trafic', icon: TrendingUp },
     { id: 'caisse', label: 'Caisse du jour', icon: Euro },
     { id: 'clients', label: 'Clients', icon: Users },
     { id: 'appointments', label: 'Rendez-vous', icon: Calendar },
@@ -953,6 +955,7 @@ export default function AdminDashboard() {
 
       {/* Site Content Tab */}
       {activeTab === 'content' && <SiteContentTab />}
+      {activeTab === 'seo' && <SeoTab />}
 
       {/* Caisse du jour Tab */}
       {activeTab === 'caisse' && <CaisseTab appointments={appointments ?? []} />}
