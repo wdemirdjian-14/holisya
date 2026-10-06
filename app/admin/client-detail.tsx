@@ -27,11 +27,13 @@ export default function ClientDetail({ clientId, onClose }: { clientId: string; 
     setSavingNotes(false);
   };
 
-  const clearBounce = async () => {
+  const toggleBounce = async (val: boolean) => {
+    setData((d: any) => ({ ...d, client: { ...d.client, emailBounced: val } })); // optimiste
     try {
-      const res = await fetch('/api/admin/client', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: clientId, emailBounced: false }) });
-      if (res.ok) { toast.success('Alerte email levée'); setData((d: any) => ({ ...d, client: { ...d.client, emailBounced: false } })); } else toast.error('Erreur');
-    } catch { toast.error('Erreur'); }
+      const res = await fetch('/api/admin/client', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: clientId, emailBounced: val }) });
+      if (res.ok) toast.success(val ? 'Email marqué comme ne fonctionnant plus' : 'Email marqué comme fonctionnel');
+      else { toast.error('Erreur'); setData((d: any) => ({ ...d, client: { ...d.client, emailBounced: !val } })); }
+    } catch { toast.error('Erreur'); setData((d: any) => ({ ...d, client: { ...d.client, emailBounced: !val } })); }
   };
 
   const c = data?.client;
@@ -69,15 +71,19 @@ export default function ClientDetail({ clientId, onClose }: { clientId: string; 
               </div>
             </div>
 
-            {c.emailBounced && (
-              <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start justify-between gap-3">
-                <div className="flex items-start gap-2 text-sm text-red-700">
-                  <Mail size={16} className="mt-0.5 shrink-0" />
-                  <span>Un email n'a pas pu être délivré à cette adresse. Vérifiez l'adresse ou contactez le client autrement.</span>
-                </div>
-                <button onClick={clearBounce} className="text-xs px-2.5 py-1.5 bg-white border border-red-200 text-red-600 rounded-lg shrink-0 hover:bg-red-100">Marquer résolu</button>
-              </div>
-            )}
+            {/* État de l'email — case à cocher manuelle (+ coché auto en cas de bounce) */}
+            <label className={`rounded-xl p-4 flex items-start gap-3 cursor-pointer select-none transition-colors ${c.emailBounced ? 'bg-red-50 border border-red-200' : 'bg-white'}`}>
+              <input type="checkbox" checked={!!c.emailBounced} onChange={(e) => toggleBounce(e.target.checked)}
+                className="mt-0.5 w-4 h-4 shrink-0 accent-red-600 cursor-pointer" />
+              <span className={`text-sm ${c.emailBounced ? 'text-red-700' : 'text-[#3B312D]/70'}`}>
+                <span className="flex items-center gap-1.5 font-medium"><Mail size={14} />L'email ne fonctionne plus</span>
+                <span className="block text-xs mt-0.5 opacity-80">
+                  {c.emailBounced
+                    ? 'Adresse signalée comme non délivrable — à vérifier ou contacter autrement. Décochez une fois corrigée.'
+                    : 'Cochez si l\'adresse est invalide / n\'aboutit pas. Se coche aussi automatiquement en cas d\'échec d\'envoi.'}
+                </span>
+              </span>
+            </label>
 
             {/* Notes privées */}
             <div className="bg-white rounded-xl p-5">
