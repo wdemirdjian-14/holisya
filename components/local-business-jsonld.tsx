@@ -33,6 +33,22 @@ export default function LocalBusinessJsonLd() {
     hasMap: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
       `${BUSINESS.name} ${BUSINESS.postalCode} ${BUSINESS.city}`,
     )}`,
+    // Signale à Google (et aux moteurs/LLM) que l'établissement est réservable en ligne.
+    // Permet d'alimenter un bouton « Réserver » dans la fiche / les résultats.
+    potentialAction: {
+      '@type': 'ReserveAction',
+      name: 'Réserver un soin',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: BUSINESS.bookingUrl,
+        inLanguage: 'fr-FR',
+        actionPlatform: [
+          'http://schema.org/DesktopWebPlatform',
+          'http://schema.org/MobileWebPlatform',
+        ],
+      },
+      result: { '@type': 'Reservation', name: 'Rendez-vous Holisya' },
+    },
   };
 
   if (BUSINESS.phone) data.telephone = BUSINESS.phone;

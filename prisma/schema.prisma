@@ -485,6 +485,23 @@ model BookingSettings {
   updatedAt            DateTime @updatedAt
 }
 
+// Réglages SEO / analytics (singleton id="global").
+model SeoSettings {
+  id               String   @id @default("global")
+  ga4MeasurementId String   @default("G-4W6W1H5WVZ") // tag GA4 côté site (NEXT_PUBLIC)
+  ga4PropertyId    String   @default("")              // ex "123456789" pour l'API GA4 Data
+  gscSiteUrl       String   @default("")              // ex "sc-domain:holisya.fr" ou "https://www.holisya.fr/"
+  updatedAt        DateTime @updatedAt
+}
+
+// Surcharge des balises title/description par page (éditable en admin).
+model SeoMeta {
+  path        String   @id // ex "/", "/services", "/contact"
+  title       String   @default("")
+  description String   @default("")
+  updatedAt   DateTime @updatedAt
+}
+
 model AvailabilityWindow {
   id        String   @id @default(cuid())
   weekday   Int

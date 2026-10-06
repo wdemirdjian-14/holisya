@@ -1,4 +1,5 @@
 import './globals.css';
+import { Suspense } from 'react';
 import Providers from './providers';
 import { Toaster } from '@/components/ui/sonner';
 import { ChunkLoadErrorHandler } from '@/components/chunk-load-error-handler';
@@ -6,7 +7,11 @@ import ContactWidget from '@/components/contact-widget';
 import MobileNav from '@/components/mobile-nav';
 import ServiceWorkerRegister from '@/components/service-worker-register';
 import LocalBusinessJsonLd from '@/components/local-business-jsonld';
+import SiteJsonLd from '@/components/site-jsonld';
 import ScrollFlower from '@/components/scroll-flower';
+import Analytics from '@/components/analytics';
+import CookieConsent from '@/components/cookie-consent';
+import { getSeoSettings } from '@/lib/seo/settings';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,11 +58,16 @@ export async function generateMetadata() {
   };
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const seo = await getSeoSettings();
   return (
     <html lang="fr" suppressHydrationWarning>
       <body className="font-opensans antialiased">
         <LocalBusinessJsonLd />
+        <SiteJsonLd />
+        <Suspense fallback={null}>
+          <Analytics measurementId={seo.ga4MeasurementId} />
+        </Suspense>
         <Providers>
           <div className="pb-16 lg:pb-0">
             {children}
@@ -66,6 +76,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ScrollFlower />
           <MobileNav />
           <Toaster />
+          <CookieConsent />
           <ChunkLoadErrorHandler />
           <ServiceWorkerRegister />
         </Providers>
