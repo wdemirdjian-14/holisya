@@ -4,6 +4,7 @@ import Providers from './providers';
 import { Toaster } from '@/components/ui/sonner';
 import { ChunkLoadErrorHandler } from '@/components/chunk-load-error-handler';
 import ContactWidget from '@/components/contact-widget';
+import InstagramWidget from '@/components/instagram-widget';
 import MobileNav from '@/components/mobile-nav';
 import ServiceWorkerRegister from '@/components/service-worker-register';
 import LocalBusinessJsonLd from '@/components/local-business-jsonld';
@@ -76,6 +77,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             {children}
           </div>
           <ContactWidget />
+          <InstagramWidget />
           <ScrollFlower />
           <MobileNav />
           <Toaster />

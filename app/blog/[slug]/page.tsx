@@ -66,7 +66,7 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
             <span className="flex items-center gap-1"><User size={14} />{post.authorName}</span>
           </div>
           <h1 className="font-playfair text-3xl md:text-4xl font-bold text-[#3B312D] mb-6">{post.title}</h1>
-          <div className="prose prose-lg max-w-none text-[#3B312D]/70" dangerouslySetInnerHTML={{ __html: post.content ?? '' }} />
+          <div className="article-content" dangerouslySetInnerHTML={{ __html: post.content ?? '' }} />
           {post.sourceUrl && (
             <a href={post.sourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 mt-8 text-sm text-[#C98F79] hover:underline">
               Source <ExternalLink size={14} />
