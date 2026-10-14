@@ -2,6 +2,7 @@
 import { motion, useReducedMotion } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
+import { BookingLink } from '@/components/booking-mode';
 import { useEffect, useState } from 'react';
 import { Sparkles, Leaf, Heart, Star, Clock, Euro, Calendar } from 'lucide-react';
 
@@ -104,9 +105,9 @@ export default function ServicesClient() {
                         <span className="flex items-center gap-1.5 text-sm text-[#3B312D]/60"><Clock size={15} className="text-[#AAB7A0]" />{s?.duration ?? 60} min</span>
                         <span className="flex items-center gap-0.5 font-playfair text-lg font-bold text-[#C98F79]">{s?.price ?? 0}<Euro size={15} /></span>
                       </div>
-                      <Link href="/rendez-vous" className="mt-4 inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-[#C98F79] text-white text-sm font-medium rounded-lg hover:bg-[#b87d68] transition-colors">
+                      <BookingLink className="mt-4 inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-[#C98F79] text-white text-sm font-medium rounded-lg hover:bg-[#b87d68] transition-colors">
                         <Calendar size={15} />Réserver ce soin
-                      </Link>
+                      </BookingLink>
                     </div>
                   </div>
                 </motion.article>

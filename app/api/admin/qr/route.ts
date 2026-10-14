@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { SITE_URL } from '@/lib/business';
-import { PLANITY_URL } from '@/lib/config';
+import { getPlanityMode } from '@/lib/site-flags';
 import { getQrTarget, resolveQrTarget, normalizeCustomUrl, QR_TARGET_TYPES, type QrTarget, QR_TARGET_KEY, QR_SCANS_KEY, QR_PATH, QR_PAGES } from '@/lib/qr-target';
 
 async function isAdmin() {
@@ -16,14 +16,15 @@ export async function GET() {
   try {
     if (!(await isAdmin())) return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
     const target = await getQrTarget();
+    const planityUrl = (await getPlanityMode()).url;
     const scans = await prisma.siteContent.findUnique({ where: { key: QR_SCANS_KEY } });
     return NextResponse.json({
       target,
-      destination: resolveQrTarget(target),
+      destination: resolveQrTarget(target, planityUrl),
       qrUrl: `${SITE_URL}${QR_PATH}`,
       scans: parseInt(scans?.value ?? '0', 10) || 0,
       pages: QR_PAGES,
-      planityUrl: PLANITY_URL,
+      planityUrl,
       siteUrl: SITE_URL,
     });
   } catch (error: any) { console.error(error); return NextResponse.json({ error: 'Erreur' }, { status: 500 }); }
@@ -45,7 +46,7 @@ export async function PUT(req: NextRequest) {
     const clean = { type: target.type, ...(target.type === 'page' ? { page: target.page } : {}), ...(target.type === 'custom' ? { url: target.url } : {}) };
     const value = JSON.stringify(clean);
     await prisma.siteContent.upsert({ where: { key: QR_TARGET_KEY }, update: { value }, create: { key: QR_TARGET_KEY, value } });
-    return NextResponse.json({ target: clean, destination: resolveQrTarget(clean) });
+    return NextResponse.json({ target: clean, destination: resolveQrTarget(clean, (await getPlanityMode()).url) });
   } catch (error: any) { console.error(error); return NextResponse.json({ error: 'Erreur' }, { status: 500 }); }
 }
 

@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { ArrowRight, Sparkles, Leaf, Heart, Star, Calendar, Gift, Users, ChevronRight, BookOpen } from 'lucide-react';
 import { useInView } from 'react-intersection-observer';
 import GalleryCarousel from '@/components/gallery-carousel';
+import PlanityHeroBadge from '@/components/planity-hero-badge';
 
 function CountUp({ end, suffix = '' }: { end: number; suffix?: string }) {
   const [count, setCount] = useState(0);
@@ -38,7 +39,7 @@ const testimonials = [
   { name: 'Gigi D.', text: 'Après ma séance de Kobido, ma peau était visiblement plus lumineuse. Une détente profonde qui dure plusieurs jours !', rating: 5 },
 ];
 
-export default function HomeClient({ galleryPhotos = [], latestPosts = [], content = {}, subscriptionsEnabled = false }: { galleryPhotos?: { id: string; imageUrl: string; caption?: string }[]; latestPosts?: any[]; content?: Record<string, string>; subscriptionsEnabled?: boolean }) {
+export default function HomeClient({ galleryPhotos = [], latestPosts = [], content = {}, subscriptionsEnabled = false, planity = { enabled: false, url: '' } }: { galleryPhotos?: { id: string; imageUrl: string; caption?: string }[]; latestPosts?: any[]; content?: Record<string, string>; subscriptionsEnabled?: boolean; planity?: { enabled: boolean; url: string } }) {
   const heroRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
   const heroY = useTransform(scrollYProgress, [0, 1], ['0%', '30%']);
@@ -93,11 +94,14 @@ export default function HomeClient({ galleryPhotos = [], latestPosts = [], conte
           </motion.h1>
           <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}
             className="text-white/70 text-lg mt-6 max-w-xl">{content['home.hero_subtitle']}</motion.p>
+          {planity.enabled && <PlanityHeroBadge url={planity.url} />}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9 }}
-            className="flex flex-col sm:flex-row gap-4 mt-10">
-            <Link href="/rendez-vous" className="px-8 py-4 bg-[#C98F79] text-white font-medium rounded-lg hover:bg-[#b87d68] transition-all flex items-center gap-2 shadow-lg hover:shadow-xl">
-              <Calendar size={18} />Prendre rendez-vous
-            </Link>
+            className={`flex flex-col sm:flex-row gap-4 ${planity.enabled ? 'mt-6' : 'mt-10'}`}>
+            {!planity.enabled && (
+              <Link href="/rendez-vous" className="px-8 py-4 bg-[#C98F79] text-white font-medium rounded-lg hover:bg-[#b87d68] transition-all flex items-center gap-2 shadow-lg hover:shadow-xl">
+                <Calendar size={18} />Prendre rendez-vous
+              </Link>
+            )}
             <Link href="/services" className="px-8 py-4 bg-white/10 backdrop-blur-sm text-white font-medium rounded-lg hover:bg-white/20 transition-all flex items-center gap-2 border border-white/20">
               Découvrir nos programmes<ArrowRight size={18} />
             </Link>
