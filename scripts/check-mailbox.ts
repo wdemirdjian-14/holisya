@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { syncMailbox } from '../lib/mailbox';
 
-// Cron (toutes les 10 min) : lit la boîte mail, traite les emails en erreur et notifie les nouveaux mails.
+// Cron (toutes les 5 min) : lit la boîte mail, traite les emails en erreur et notifie les nouveaux mails.
 const prisma = new PrismaClient();
 
 async function main() {

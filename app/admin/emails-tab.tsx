@@ -423,7 +423,7 @@ export default function EmailsTab({ clients, initialSection, onOpenClient }: { c
           <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
             <div>
               <h3 className="text-sm font-semibold text-[#3B312D]">Boîte de réception</h3>
-              <p className="text-[11px] text-[#3B312D]/50">Vérifiée automatiquement toutes les 10 min. Les emails revenus en erreur cochent « L'email ne fonctionne plus » sur la fiche cliente.</p>
+              <p className="text-[11px] text-[#3B312D]/50">Vérifiée automatiquement toutes les 5 min. Les emails revenus en erreur cochent « L'email ne fonctionne plus » sur la fiche cliente.</p>
             </div>
             <div className="flex gap-2">
               {inbox.unread > 0 && <button onClick={() => markInbox({ all: true })} className="flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg bg-[#F8F4EF] text-[#3B312D]/70"><CheckCheck size={13} />Tout marquer lu</button>}
