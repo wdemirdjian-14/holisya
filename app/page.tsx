@@ -4,7 +4,7 @@ import HomeClient from '@/components/home-client';
 import NewsletterPopup from '@/components/newsletter-popup';
 import { prisma } from '@/lib/db';
 import { getSiteContentMap } from '@/lib/site-content';
-import { areSubscriptionsEnabled } from '@/lib/site-flags';
+import { areSubscriptionsEnabled, getPlanityMode } from '@/lib/site-flags';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,10 +15,11 @@ export default async function HomePage() {
   try { latestPosts = await prisma.blogPost.findMany({ where: { isPublished: true, publishedAt: { lte: new Date() } }, orderBy: { publishedAt: 'desc' }, take: 3 }); } catch {}
   const content = await getSiteContentMap(['home.hero_overline', 'home.hero_title', 'home.hero_subtitle']);
   const subscriptionsEnabled = await areSubscriptionsEnabled();
+  const planity = await getPlanityMode();
   return (
     <>
       <Header />
-      <HomeClient subscriptionsEnabled={subscriptionsEnabled} galleryPhotos={JSON.parse(JSON.stringify(galleryPhotos ?? []))} latestPosts={JSON.parse(JSON.stringify(latestPosts ?? []))} content={content} />
+      <HomeClient subscriptionsEnabled={subscriptionsEnabled} planity={planity} galleryPhotos={JSON.parse(JSON.stringify(galleryPhotos ?? []))} latestPosts={JSON.parse(JSON.stringify(latestPosts ?? []))} content={content} />
       <NewsletterPopup />
       <Footer />
     </>

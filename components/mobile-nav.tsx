@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { BookingLink } from '@/components/booking-mode';
 import { Home, Sparkles, CalendarPlus, BookOpen, User } from 'lucide-react';
 
 export default function MobileNav() {
@@ -25,12 +26,12 @@ export default function MobileNav() {
         {items.slice(0, 2).map((item) => <TabItem key={item.href} item={item} active={item.match(pathname)} />)}
 
         {/* Bouton central Réserver, surélevé */}
-        <Link href="/rendez-vous" className="relative -top-4 flex flex-col items-center" aria-label="Prendre rendez-vous">
+        <BookingLink className="relative -top-4 flex flex-col items-center" aria-label="Prendre rendez-vous">
           <span className={`flex items-center justify-center w-14 h-14 rounded-full shadow-lg transition-transform active:scale-95 ${pathname.startsWith('/rendez-vous') ? 'bg-[#b87d68]' : 'bg-[#C98F79]'} text-white ring-4 ring-white`}>
             <CalendarPlus size={24} />
           </span>
           <span className="text-[10px] font-medium text-[#C98F79] mt-1">Réserver</span>
-        </Link>
+        </BookingLink>
 
         {items.slice(2).map((item) => <TabItem key={item.href} item={item} active={item.match(pathname)} />)}
       </div>

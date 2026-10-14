@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { Menu, X, User, LogOut, LayoutDashboard, ShoppingBag, Gift, Calendar, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import NotificationBell from '@/components/notification-bell';
+import { useBookingMode } from '@/components/booking-mode';
 
 const navLinks = [
   { href: '/', label: 'Accueil' },
@@ -27,9 +28,12 @@ export default function Header() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [subsEnabled, setSubsEnabled] = useState(false);
   const isAdmin = (session?.user as any)?.role === 'ADMIN';
+  const booking = useBookingMode();
 
   // Le lien "Abonnements" n'apparaît que si l'admin a activé la fonctionnalité.
-  const links = navLinks.filter((l) => l.href !== '/abonnements' || subsEnabled);
+  // Bascule Planity : le lien Rendez-vous ouvre Planity dans un nouvel onglet.
+  const links = navLinks.filter((l) => l.href !== '/abonnements' || subsEnabled)
+    .map((l) => (l.href === '/rendez-vous' && booking.planity ? { ...l, href: booking.url, external: true } : l));
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -58,7 +62,7 @@ export default function Header() {
           </Link>
           <nav className="hidden lg:flex items-center gap-1">
             {links.map((link: any) => (
-              <Link key={link.href} href={link.href}
+              <Link key={link.href} href={link.href} {...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
                 className={`px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${pathname === link.href ? (scrolled || !isHome ? 'text-[#C98F79] bg-[#C98F79]/10' : 'text-white bg-white/20') : `${textColor} hover:bg-[#C98F79]/10 hover:text-[#C98F79]`}`}>
                 {link.label}
               </Link>
@@ -117,7 +121,7 @@ export default function Header() {
             className="lg:hidden bg-white backdrop-blur-md border-t border-[#3B312D]/5 shadow-md">
             <div className="max-w-[1200px] mx-auto px-4 py-4 space-y-1">
               {links.map((link: any) => (
-                <Link key={link.href} href={link.href}
+                <Link key={link.href} href={link.href} {...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
                   className={`block px-4 py-3 rounded-lg text-sm font-medium transition-colors ${pathname === link.href ? 'bg-[#C98F79]/10 text-[#C98F79]' : 'text-[#3B312D] hover:bg-[#C98F79]/10'}`}>
                   {link.label}
                 </Link>
