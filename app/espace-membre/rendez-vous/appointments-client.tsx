@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Calendar, Clock, User, Loader2, ArrowLeft, X, CalendarClock } from 'lucide-react';
 import Link from 'next/link';
+import { BookingLink } from '@/components/booking-mode';
 import { toast } from 'sonner';
 
 export default function AppointmentsClient() {
@@ -41,7 +42,7 @@ export default function AppointmentsClient() {
         <div className="bg-white rounded-xl p-8 shadow-sm text-center">
           <Calendar size={48} className="text-[#AAB7A0] mx-auto mb-4" />
           <p className="text-[#3B312D]/60">Aucun rendez-vous pour le moment</p>
-          <Link href="/rendez-vous" className="inline-block mt-4 px-6 py-3 bg-[#C98F79] text-white font-medium rounded-lg">Prendre rendez-vous</Link>
+          <BookingLink className="inline-block mt-4 px-6 py-3 bg-[#C98F79] text-white font-medium rounded-lg">Prendre rendez-vous</BookingLink>
         </div>
       ) : (
         <div className="space-y-3">

@@ -482,6 +482,9 @@ model BookingSettings {
   minNoticeHours       Int      @default(2)
   maxAdvanceDays       Int      @default(60)
   breakMinutes         Int      @default(15)
+  // Bascule Planity : tous les liens de prise de RDV renvoient vers Planity.
+  planityMode          Boolean  @default(false)
+  planityUrl           String?
   updatedAt            DateTime @updatedAt
 }
 

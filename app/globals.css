@@ -94,6 +94,10 @@
   .article-content h3 { font-size: 1.15rem; }
 }
 
+/* Rangées d'onglets défilantes : défilement horizontal sans barre visible */
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+
 /* Custom scrollbar */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: #F8F4EF; }

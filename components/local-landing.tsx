@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { BookingLink } from '@/components/booking-mode';
 import { Clock, Euro, Calendar, Check, Sparkles, MapPin } from 'lucide-react';
 import Header from '@/components/header';
 import Footer from '@/components/footer';
@@ -65,9 +66,9 @@ export default function LocalLanding(props: LocalLandingProps) {
             <h1 className="font-playfair text-3xl sm:text-4xl md:text-5xl font-bold text-[#3B312D] mt-3 leading-tight">{h1}</h1>
             <p className="text-[#3B312D]/60 mt-5 max-w-2xl mx-auto text-lg">{intro[0]}</p>
             <div className="flex flex-wrap items-center justify-center gap-3 mt-8">
-              <Link href="/rendez-vous" className="inline-flex items-center gap-2 px-7 py-3.5 bg-[#C98F79] text-white font-medium rounded-lg hover:bg-[#b87d68] transition-all">
+              <BookingLink className="inline-flex items-center gap-2 px-7 py-3.5 bg-[#C98F79] text-white font-medium rounded-lg hover:bg-[#b87d68] transition-all">
                 <Calendar size={17} />Réserver un soin
-              </Link>
+              </BookingLink>
               <Link href="/services" className="inline-flex items-center gap-2 px-7 py-3.5 border border-[#C98F79]/40 text-[#3B312D] font-medium rounded-lg hover:bg-white transition-all">
                 Voir tous les soins
               </Link>
@@ -148,9 +149,9 @@ export default function LocalLanding(props: LocalLandingProps) {
           <div className="max-w-[700px] mx-auto px-4">
             <h2 className="font-playfair text-2xl sm:text-3xl font-bold text-white">Offrez-vous un moment rien qu'à vous</h2>
             <p className="text-white/60 mt-3">Réservez votre soin à {city} en quelques clics, 7j/7.</p>
-            <Link href="/rendez-vous" className="inline-flex items-center gap-2 px-8 py-4 bg-[#C98F79] text-white font-medium rounded-lg hover:bg-[#b87d68] transition-all mt-7">
+            <BookingLink className="inline-flex items-center gap-2 px-8 py-4 bg-[#C98F79] text-white font-medium rounded-lg hover:bg-[#b87d68] transition-all mt-7">
               <Calendar size={18} />Prendre rendez-vous
-            </Link>
+            </BookingLink>
           </div>
         </section>
       </main>

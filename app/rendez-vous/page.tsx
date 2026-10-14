@@ -1,6 +1,8 @@
 import Header from '@/components/header';
 import Footer from '@/components/footer';
 import BookingClient from './booking-client';
+import { redirect } from 'next/navigation';
+import { getPlanityMode } from '@/lib/site-flags';
 
 export const dynamic = 'force-dynamic';
 import { withSeoOverride } from '@/lib/seo/meta';
@@ -13,7 +15,10 @@ export async function generateMetadata() {
   });
 }
 
-export default function RendezVousPage() {
+export default async function RendezVousPage() {
+  // Bascule Planity active : les anciens liens (emails, Google…) renvoient vers Planity.
+  const planity = await getPlanityMode();
+  if (planity.enabled) redirect(planity.url);
   return (
     <>
       <Header />

@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getBookingSettings } from '@/lib/booking-server';
+import { PLANITY_URL } from '@/lib/config';
 
 export async function GET() {
   try {
@@ -14,7 +15,9 @@ export async function GET() {
       subscriptionsEnabled: (settings as any).subscriptionsEnabled ?? false,
       requireCardImprint: settings.requireCardImprint,
       maxAdvanceDays: settings.maxAdvanceDays,
+      planityMode: settings.planityMode,
+      planityUrl: settings.planityUrl || PLANITY_URL,
       services,
     });
-  } catch (error: any) { console.error(error); return NextResponse.json({ enabled: false, subscriptionsEnabled: false, services: [] }); }
+  } catch (error: any) { console.error(error); return NextResponse.json({ enabled: false, subscriptionsEnabled: false, planityMode: false, planityUrl: PLANITY_URL, services: [] }); }
 }

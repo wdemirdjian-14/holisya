@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Loader2, Plus, Trash2, Calendar, Clock, Ban, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
+import { PLANITY_URL } from '@/lib/config';
 
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 
@@ -14,13 +15,14 @@ export default function BookingTab() {
   const [newWin, setNewWin] = useState({ weekday: 1, startTime: '09:00', endTime: '18:00' });
   const [newClosure, setNewClosure] = useState('');
   const [newRange, setNewRange] = useState({ start: '', end: '' });
+  const [planityUrl, setPlanityUrl] = useState('');
 
   const load = () => {
     setLoading(true);
     Promise.all([
       fetch('/api/admin/booking-settings').then((r) => r.json()),
       fetch('/api/admin/availability').then((r) => r.json()),
-    ]).then(([s, a]) => { setSettings(s?.settings ?? null); setWindows(a?.windows ?? []); setClosures(a?.closures ?? []); setLoading(false); }).catch(() => setLoading(false));
+    ]).then(([s, a]) => { setSettings(s?.settings ?? null); setPlanityUrl(s?.settings?.planityUrl ?? ''); setWindows(a?.windows ?? []); setClosures(a?.closures ?? []); setLoading(false); }).catch(() => setLoading(false));
   };
   useEffect(() => { load(); }, []);
 
@@ -30,7 +32,8 @@ export default function BookingTab() {
     setSettings(merged);
     try {
       const res = await fetch('/api/admin/booking-settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(merged) });
-      if (res.ok) toast.success('Enregistré'); else toast.error('Erreur');
+      if (res.ok) { const d = await res.json(); setSettings(d?.settings ?? merged); toast.success('Enregistré'); }
+      else { const d = await res.json().catch(() => ({})); toast.error(d?.error ?? 'Erreur'); load(); }
     } catch { toast.error('Erreur'); }
     setSaving(false);
   };
@@ -65,6 +68,33 @@ export default function BookingTab() {
       <div>
         <h2 className="font-playfair text-xl font-semibold text-[#3B312D]">Réservation en ligne</h2>
         <p className="text-xs text-[#3B312D]/50 mt-1">Vos clientes réservent directement sur le site. Vous ouvrez les créneaux et gérez les fermetures.</p>
+      </div>
+
+      {/* Bascule Planity : tous les liens RDV + gros logo animé sur l'accueil */}
+      <div className={`rounded-xl p-5 shadow-sm ${settings.planityMode ? 'bg-[#C98F79]/10 border border-[#C98F79]/30' : 'bg-white'}`}>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="font-medium text-[#3B312D]">Passer la prise de RDV sur Planity</p>
+            <p className="text-xs text-[#3B312D]/50 mt-1">
+              {settings.planityMode
+                ? 'Actif : tous les boutons « Prendre rendez-vous » ouvrent Planity, et un grand logo Planity animé s\'affiche sur la page d\'accueil.'
+                : 'Inactif : les clientes réservent sur le site (page Rendez-vous).'}
+            </p>
+          </div>
+          <button onClick={() => saveSettings({ planityMode: !settings.planityMode })} disabled={saving} aria-pressed={!!settings.planityMode}
+            className={`relative inline-flex h-7 w-12 flex-none items-center rounded-full transition-colors disabled:opacity-50 ${settings.planityMode ? 'bg-[#C98F79]' : 'bg-[#3B312D]/20'}`}>
+            <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${settings.planityMode ? 'translate-x-6' : 'translate-x-1'}`} />
+          </button>
+        </div>
+        <div className="mt-4 flex flex-col sm:flex-row gap-2">
+          <input type="url" value={planityUrl} onChange={(e) => setPlanityUrl(e.target.value)} placeholder={PLANITY_URL}
+            className="flex-1 min-w-0 px-3 py-2 text-sm border border-[#F8F4EF] rounded-lg bg-[#F8F4EF]/50 text-[#3B312D]" />
+          <button onClick={() => saveSettings({ planityUrl })} disabled={saving || planityUrl === (settings.planityUrl ?? '')}
+            className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-[#C98F79] hover:bg-[#b87d68] disabled:opacity-50">Enregistrer le lien</button>
+          <a href={planityUrl || PLANITY_URL} target="_blank" rel="noopener noreferrer"
+            className="px-4 py-2 rounded-lg text-sm font-medium text-[#C98F79] border border-[#C98F79]/40 text-center hover:bg-[#C98F79]/10">Tester</a>
+        </div>
+        <p className="text-[11px] text-[#3B312D]/40 mt-1.5">Lien de votre page Planity. Laissez vide pour utiliser le lien par défaut.</p>
       </div>
 
       {/* Bandeau état + bouton ON/OFF rapide */}
