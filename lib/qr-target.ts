@@ -57,10 +57,11 @@ export function parseQrTarget(raw: string | null | undefined): QrTarget {
   return DEFAULT_QR_TARGET;
 }
 
-export function resolveQrTarget(t: QrTarget): string {
+// planityUrl : lien réglé dans Réservation en ligne (bascule Planity), sinon le lien par défaut.
+export function resolveQrTarget(t: QrTarget, planityUrl: string = PLANITY_URL): string {
   switch (t.type) {
     case 'planity':
-      return PLANITY_URL;
+      return planityUrl;
     case 'booking':
       return `${SITE_URL}/rendez-vous`;
     case 'page': {
