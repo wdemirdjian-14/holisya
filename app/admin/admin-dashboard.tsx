@@ -1,6 +1,6 @@
 'use client';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { LayoutDashboard, Users, Calendar, Gift, Crown, Tag, FileText, MessageSquare, BarChart3, Loader2, Euro, TrendingUp, Download, Bell, Search, Plus, Edit, Trash2, X, Check, Eye, Send, Minus, ShoppingBag, Image as ImageIcon, Mail, Type, Video, CalendarPlus } from 'lucide-react';
@@ -44,6 +44,11 @@ export default function AdminDashboard() {
   const { data: session, status } = useSession() || {};
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>('overview');
+  // Lien direct vers un onglet (ex. notification « Nouveau mail » → /admin?tab=emails&section=inbox).
+  const searchParams = useSearchParams();
+  const urlTab = searchParams?.get('tab') as Tab | null;
+  const urlSection = searchParams?.get('section') ?? undefined;
+  useEffect(() => { if (urlTab) setActiveTab(urlTab); }, [urlTab, urlSection]);
   const [stats, setStats] = useState<any>(null);
   const [clients, setClients] = useState<any[]>([]);
   const [appointments, setAppointments] = useState<any[]>([]);
@@ -948,7 +953,7 @@ export default function AdminDashboard() {
       )}
 
       {/* Emails Tab */}
-      {activeTab === 'emails' && <EmailsTab clients={clients ?? []} />}
+      {activeTab === 'emails' && <EmailsTab clients={clients ?? []} initialSection={urlSection} onOpenClient={(id) => setDetailClientId(id)} />}
 
       {/* Gallery Tab */}
       {activeTab === 'gallery' && <GalleryTab />}

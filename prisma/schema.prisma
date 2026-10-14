@@ -573,3 +573,25 @@ model EmailQueueItem {
   @@index([campaignId])
   @@index([scheduledFor])
 }
+
+// Messages lus dans la boîte mail (IMAP) : retours en erreur (bounces), réponses de clientes, etc.
+model InboxMessage {
+  id           String   @id @default(cuid())
+  messageId    String   @unique
+  uid          Int      @default(0)
+  fromEmail    String   @default("")
+  fromName     String   @default("")
+  subject      String   @default("")
+  snippet      String   @default("")
+  kind         String   @default("message") // message | bounce | autoreply | planity
+  bouncedEmail String   @default("")
+  permanent    Boolean  @default(true)
+  userId       String   @default("")
+  read         Boolean  @default(false)
+  receivedAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  @@index([read])
+  @@index([kind])
+  @@index([receivedAt])
+}

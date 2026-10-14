@@ -41,16 +41,25 @@ async function main() {
     // Désinscription (token client si disponible).
     let unsubscribeUrl = `${appUrl}/desinscription`;
     let optedOut = false;
+    let bounced = false;
     let prevNotes = '';
     if (it.userId) {
-      const u = await prisma.user.findUnique({ where: { id: it.userId }, select: { emailOptOut: true, unsubscribeToken: true, privateNotes: true } });
+      const u = await prisma.user.findUnique({ where: { id: it.userId }, select: { emailOptOut: true, emailBounced: true, unsubscribeToken: true, privateNotes: true } });
       prevNotes = u?.privateNotes ?? '';
+      if (u?.emailBounced) bounced = true;
       if (u?.emailOptOut) optedOut = true;
       else {
         let token = u?.unsubscribeToken;
         if (!token) { token = crypto.randomBytes(24).toString('hex'); await prisma.user.update({ where: { id: it.userId }, data: { unsubscribeToken: token } }); }
         unsubscribeUrl = `${appUrl}/desinscription?token=${token}`;
       }
+    }
+
+    // Adresse revenue en erreur : on n'insiste pas (protège la réputation d'envoi).
+    if (bounced) {
+      await prisma.emailQueueItem.update({ where: { id: it.id }, data: { status: 'skipped', error: 'email en échec' } });
+      skipped += 1;
+      continue;
     }
 
     if (optedOut) {
