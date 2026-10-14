@@ -17,7 +17,7 @@ export default function robots(): MetadataRoute.Robots {
   const headersList = headers();
   const host = headersList.get('x-forwarded-host') ?? process.env.NEXTAUTH_URL?.replace(/^https?:\/\//, '') ?? 'holisya.fr';
   const siteUrl = `https://${host}`;
-  const disallow = ['/api/', '/admin/', '/espace-membre/'];
+  const disallow = ['/api/', '/admin/', '/espace-membre/', '/qr'];
 
   return {
     rules: [
