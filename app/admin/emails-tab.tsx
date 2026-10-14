@@ -264,13 +264,13 @@ export default function EmailsTab({ clients }: { clients: any[] }) {
   if (loading) return <div className="flex items-center justify-center py-20"><Loader2 size={28} className="animate-spin text-[#C98F79]" /></div>;
 
   return (
-    <div>
-      <div className="flex gap-2 mb-6">
+    <div className="min-w-0">
+      <div className="flex gap-2 mb-6 -mx-3 px-3 sm:mx-0 sm:px-0 overflow-x-auto scrollbar-hide">
         {[{ id: 'send', label: 'Envoyer', icon: Send }, { id: 'lists', label: 'Listes', icon: Users }, { id: 'newsletter', label: `Newsletter Antibes (${newsletterSubs.length})`, icon: Mail }, { id: 'templates', label: 'Templates', icon: FileText }, { id: 'push', label: 'Notifications push', icon: Bell }, { id: 'history', label: 'Historique', icon: History }].map((s: any) => {
           const Icon = s.icon;
           return (
             <button key={s.id} onClick={() => setSection(s.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${section === s.id ? 'bg-[#C98F79] text-white' : 'bg-white text-[#3B312D]/70'}`}>
+              className={`flex shrink-0 items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${section === s.id ? 'bg-[#C98F79] text-white' : 'bg-white text-[#3B312D]/70'}`}>
               <Icon size={14} />{s.label}
             </button>
           );
@@ -288,9 +288,9 @@ export default function EmailsTab({ clients }: { clients: any[] }) {
           </div>
           <div>
             <label className="text-sm font-medium text-[#3B312D]/70">Destinataires</label>
-            <div className="flex gap-2 mt-1">
+            <div className="flex gap-2 mt-1 overflow-x-auto scrollbar-hide">
               {[{ id: 'single', label: 'Un contact' }, { id: 'liste', label: 'Une liste' }, { id: 'newsletter', label: `Newsletter (${newsletterSubs.length})` }, { id: 'selected', label: 'Sélection' }, { id: 'all', label: `Tous (${clients.length})` }].map((m: any) => (
-                <button key={m.id} onClick={() => setRecipientMode(m.id)} className={`px-3 py-2 text-xs rounded-lg font-medium ${recipientMode === m.id ? 'bg-[#AAB7A0] text-white' : 'bg-[#F8F4EF] text-[#3B312D]/70'}`}>{m.label}</button>
+                <button key={m.id} onClick={() => setRecipientMode(m.id)} className={`shrink-0 px-3 py-2 text-xs rounded-lg font-medium whitespace-nowrap ${recipientMode === m.id ? 'bg-[#AAB7A0] text-white' : 'bg-[#F8F4EF] text-[#3B312D]/70'}`}>{m.label}</button>
               ))}
             </div>
           </div>

@@ -125,10 +125,10 @@ export default function GalleryTab() {
         )}
       </div>
 
-      <div className="flex gap-2 mb-6">
+      <div className="flex gap-2 mb-6 -mx-3 px-3 sm:mx-0 sm:px-0 overflow-x-auto scrollbar-hide">
         {[{ id: 'carousel', label: 'Carrousel accueil' }, { id: 'all', label: 'Toutes les photos du site' }].map((t: any) => (
           <button key={t.id} onClick={() => { setView(t.id); if (t.id === 'all' && sitePhotos.length === 0) loadSitePhotos(); }}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${view === t.id ? 'bg-[#C98F79] text-white' : 'bg-white text-[#3B312D]/70 hover:bg-[#C98F79]/10'}`}>{t.label}</button>
+            className={`shrink-0 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${view === t.id ? 'bg-[#C98F79] text-white' : 'bg-white text-[#3B312D]/70 hover:bg-[#C98F79]/10'}`}>{t.label}</button>
         ))}
       </div>
 

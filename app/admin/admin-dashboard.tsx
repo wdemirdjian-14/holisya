@@ -3,7 +3,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { LayoutDashboard, Users, Calendar, Gift, Crown, Tag, FileText, MessageSquare, BarChart3, Loader2, Euro, TrendingUp, Download, Bell, Search, Plus, Edit, Trash2, X, Check, Eye, Send, Minus, ShoppingBag, Image as ImageIcon, Mail, Type, Video, CalendarPlus } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, Gift, Crown, Tag, FileText, MessageSquare, BarChart3, Loader2, Euro, TrendingUp, Download, Bell, Search, Plus, Edit, Trash2, X, Check, Eye, Send, Minus, ShoppingBag, Image as ImageIcon, Mail, Type, Video, CalendarPlus, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import dynamic from 'next/dynamic';
 import ClientPicker from './client-picker';
@@ -19,6 +19,7 @@ const CaisseTab = dynamic(() => import('./caisse-tab'), { ssr: false, loading: (
 const VideosTab = dynamic(() => import('./videos-tab'), { ssr: false, loading: () => <div className="h-64 bg-white rounded-xl animate-pulse" /> });
 const PlanityTasks = dynamic(() => import('./planity-tasks'), { ssr: false });
 const BookingTab = dynamic(() => import('./booking-tab'), { ssr: false, loading: () => <div className="h-64 bg-white rounded-xl animate-pulse" /> });
+const SettingsTab = dynamic(() => import('./settings-tab'), { ssr: false, loading: () => <div className="h-64 bg-white rounded-xl animate-pulse" /> });
 const SiteContentTab = dynamic(() => import('./site-content-tab'), { ssr: false, loading: () => <div className="h-64 bg-white rounded-xl animate-pulse" /> });
 const SeoTab = dynamic(() => import('./seo-tab'), { ssr: false, loading: () => <div className="h-64 bg-white rounded-xl animate-pulse" /> });
 const AgendaCalendar = dynamic(() => import('./agenda-calendar'), { ssr: false, loading: () => <div className="h-64 bg-white rounded-xl animate-pulse" /> });
@@ -38,7 +39,7 @@ function toLocalInputValue(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-type Tab = 'overview' | 'caisse' | 'clients' | 'appointments' | 'booking' | 'giftcards' | 'subscriptions' | 'promos' | 'blog' | 'contacts' | 'testimonials' | 'services' | 'videos' | 'emails' | 'gallery' | 'content' | 'seo';
+type Tab = 'overview' | 'caisse' | 'clients' | 'appointments' | 'booking' | 'giftcards' | 'subscriptions' | 'promos' | 'blog' | 'contacts' | 'testimonials' | 'services' | 'videos' | 'emails' | 'gallery' | 'content' | 'seo' | 'settings';
 
 export default function AdminDashboard() {
   const { data: session, status } = useSession() || {};
@@ -311,6 +312,7 @@ export default function AdminDashboard() {
     { id: 'videos', label: 'Vidéos premium', icon: Video },
     { id: 'gallery', label: 'Galerie', icon: ImageIcon },
     { id: 'content', label: 'Textes institutionnels', icon: Type },
+    { id: 'settings', label: 'Réglages', icon: Settings },
   ];
 
   const filteredClients = (clients ?? []).filter((c: any) => {
@@ -965,6 +967,7 @@ export default function AdminDashboard() {
 
       {/* Réservation en ligne Tab */}
       {activeTab === 'booking' && <BookingTab />}
+      {activeTab === 'settings' && <SettingsTab />}
 
       {/* Fiche client 360° */}
       {detailClientId && <ClientDetail clientId={detailClientId} onClose={() => { setDetailClientId(null); refreshData(); }} />}
