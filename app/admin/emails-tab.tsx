@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Plus, Edit, Trash2, Send, X, Loader2, Mail, History, FileText, Bell, Users, Filter, Save } from 'lucide-react';
+import { Plus, Edit, Trash2, Send, X, Loader2, Mail, History, FileText, Bell, Users, Filter, Save, Inbox, RefreshCw, AlertTriangle, CheckCheck } from 'lucide-react';
 import { toast } from 'sonner';
 
 const VARIABLES = [
@@ -9,8 +9,13 @@ const VARIABLES = [
   { key: 'email', label: 'Email' },
 ];
 
-export default function EmailsTab({ clients }: { clients: any[] }) {
-  const [section, setSection] = useState<'templates' | 'send' | 'history' | 'push' | 'lists' | 'newsletter'>('send');
+type Section = 'templates' | 'send' | 'history' | 'push' | 'lists' | 'newsletter' | 'inbox';
+
+export default function EmailsTab({ clients, initialSection, onOpenClient }: { clients: any[]; initialSection?: string; onOpenClient?: (id: string) => void }) {
+  const [section, setSection] = useState<Section>((initialSection as Section) || 'send');
+  const [inbox, setInbox] = useState<{ configured: boolean; messages: any[]; unread: number; unreadBounces: number }>({ configured: true, messages: [], unread: 0, unreadBounces: 0 });
+  const [inboxKind, setInboxKind] = useState<'all' | 'message' | 'bounce' | 'other'>('all');
+  const [syncing, setSyncing] = useState(false);
   const [newsletterSubs, setNewsletterSubs] = useState<any[]>([]);
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [campaignDetail, setCampaignDetail] = useState<any>(null);
@@ -80,6 +85,31 @@ export default function EmailsTab({ clients }: { clients: any[] }) {
   const loadWindow = () => fetch('/api/admin/booking-settings').then(r => r.json()).then(d => { if (d?.settings) setEmailWindow({ start: d.settings.emailWindowStart ?? 8, end: d.settings.emailWindowEnd ?? 21 }); }).catch(() => {});
 
   useEffect(() => { load(); loadPush(); loadSegments(); loadNewsletter(); loadCampaigns(); loadWindow(); }, []);
+  useEffect(() => { if (initialSection) setSection(initialSection as Section); }, [initialSection]);
+
+  // Boîte de réception (mails lus par IMAP : messages reçus + emails revenus en erreur).
+  const loadInbox = (kind = inboxKind) => fetch(`/api/admin/inbox?kind=${kind}`).then(r => r.json()).then(d => { if (d?.messages) setInbox(d); }).catch(() => {});
+  useEffect(() => { loadInbox(inboxKind); }, [inboxKind]);
+  useEffect(() => {
+    if (section !== 'inbox') return;
+    const t = setInterval(() => loadInbox(), 60000);
+    return () => clearInterval(t);
+  }, [section, inboxKind]);
+  const syncInbox = async () => {
+    setSyncing(true);
+    try {
+      const res = await fetch('/api/admin/inbox', { method: 'POST' });
+      const d = await res.json();
+      if (res.ok) toast.success(d.added ? `${d.added} nouveau(x) mail(s)${d.clientsUpdated ? ` · ${d.clientsUpdated} fiche(s) en échec` : ''}` : 'Aucun nouveau mail');
+      else toast.error(d?.error ?? 'Erreur');
+      loadInbox();
+    } catch { toast.error('Erreur'); }
+    setSyncing(false);
+  };
+  const markInbox = async (body: any) => {
+    await fetch('/api/admin/inbox', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).catch(() => {});
+    loadInbox();
+  };
 
   const openCampaign = (id: string) => fetch(`/api/admin/campaigns/${id}`).then(r => r.json()).then(setCampaignDetail).catch(() => {});
   const campaignAction = async (id: string, action: 'pause' | 'resume' | 'cancel') => {
@@ -266,7 +296,7 @@ export default function EmailsTab({ clients }: { clients: any[] }) {
   return (
     <div className="min-w-0">
       <div className="flex gap-2 mb-6 -mx-3 px-3 sm:mx-0 sm:px-0 overflow-x-auto scrollbar-hide">
-        {[{ id: 'send', label: 'Envoyer', icon: Send }, { id: 'lists', label: 'Listes', icon: Users }, { id: 'newsletter', label: `Newsletter Antibes (${newsletterSubs.length})`, icon: Mail }, { id: 'templates', label: 'Templates', icon: FileText }, { id: 'push', label: 'Notifications push', icon: Bell }, { id: 'history', label: 'Historique', icon: History }].map((s: any) => {
+        {[{ id: 'send', label: 'Envoyer', icon: Send }, { id: 'inbox', label: `Boîte de réception${inbox.unread ? ` (${inbox.unread})` : ''}`, icon: Inbox }, { id: 'lists', label: 'Listes', icon: Users }, { id: 'newsletter', label: `Newsletter Antibes (${newsletterSubs.length})`, icon: Mail }, { id: 'templates', label: 'Templates', icon: FileText }, { id: 'push', label: 'Notifications push', icon: Bell }, { id: 'history', label: 'Historique', icon: History }].map((s: any) => {
           const Icon = s.icon;
           return (
             <button key={s.id} onClick={() => setSection(s.id)}
@@ -385,6 +415,61 @@ export default function EmailsTab({ clients }: { clients: any[] }) {
           <button onClick={send} disabled={sending} className="w-full py-3 bg-[#C98F79] text-white font-medium rounded-lg disabled:opacity-50 flex items-center justify-center gap-2">
             {sending ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />}{sending ? 'Envoi en cours...' : 'Envoyer'}
           </button>
+        </div>
+      )}
+
+      {section === 'inbox' && (
+        <div className="bg-white rounded-xl shadow-sm p-5">
+          <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
+            <div>
+              <h3 className="text-sm font-semibold text-[#3B312D]">Boîte de réception</h3>
+              <p className="text-[11px] text-[#3B312D]/50">Vérifiée automatiquement toutes les 5 min. Les emails revenus en erreur cochent « L'email ne fonctionne plus » sur la fiche cliente.</p>
+            </div>
+            <div className="flex gap-2">
+              {inbox.unread > 0 && <button onClick={() => markInbox({ all: true })} className="flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg bg-[#F8F4EF] text-[#3B312D]/70"><CheckCheck size={13} />Tout marquer lu</button>}
+              <button onClick={syncInbox} disabled={syncing} className="flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg bg-[#C98F79] text-white disabled:opacity-50"><RefreshCw size={13} className={syncing ? 'animate-spin' : ''} />Vérifier maintenant</button>
+            </div>
+          </div>
+          {!inbox.configured && (
+            <p className="text-xs bg-amber-50 text-amber-700 rounded-lg p-3 mb-3">La boîte mail n'est pas encore connectée : il manque IMAP_HOST, IMAP_USER et IMAP_PASSWORD dans le fichier .env du serveur.</p>
+          )}
+          <div className="flex gap-1.5 mb-3 flex-wrap">
+            {[{ id: 'all', label: 'Tout' }, { id: 'message', label: 'Messages' }, { id: 'bounce', label: `En erreur${inbox.unreadBounces ? ` (${inbox.unreadBounces})` : ''}` }, { id: 'other', label: 'Automatiques' }].map((k: any) => (
+              <button key={k.id} onClick={() => setInboxKind(k.id)} className={`px-3 py-1.5 text-xs rounded-full ${inboxKind === k.id ? 'bg-[#AAB7A0] text-white' : 'bg-[#F8F4EF] text-[#3B312D]/70'}`}>{k.label}</button>
+            ))}
+          </div>
+          {inbox.messages.length === 0 ? (
+            <p className="text-sm text-[#3B312D]/40 py-8 text-center">Aucun mail pour l'instant.</p>
+          ) : (
+            <div className="divide-y divide-[#F8F4EF]">
+              {inbox.messages.map((m: any) => {
+                const label = m.kind === 'bounce' ? (m.permanent ? 'En erreur' : 'Retard de livraison') : m.kind === 'autoreply' ? 'Réponse auto' : m.kind === 'promo' ? 'Newsletter / pub' : m.kind === 'planity' ? 'Planity' : m.kind === 'internal' ? 'Site' : '';
+                return (
+                  <div key={m.id} className={`py-3 flex items-start gap-3 ${m.read ? 'opacity-60' : ''}`}>
+                    <div className="flex-none mt-0.5">
+                      {m.kind === 'bounce' ? <AlertTriangle size={16} className="text-red-500" /> : <Mail size={16} className={m.read ? 'text-[#3B312D]/30' : 'text-[#C98F79]'} />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className={`text-sm text-[#3B312D] truncate ${m.read ? '' : 'font-semibold'}`}>{m.kind === 'bounce' ? (m.bouncedEmail || 'Adresse inconnue') : (m.fromName || m.fromEmail)}</p>
+                        {label && <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${m.kind === 'bounce' && m.permanent ? 'bg-red-100 text-red-700' : 'bg-[#F8F4EF] text-[#3B312D]/60'}`}>{label}</span>}
+                        <span className="text-[10px] text-[#3B312D]/40 ml-auto whitespace-nowrap">{new Date(m.receivedAt).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                      <p className="text-xs text-[#3B312D]/80 truncate">{m.subject || '(sans objet)'}</p>
+                      {m.kind === 'bounce'
+                        ? <p className="text-[11px] text-[#3B312D]/50">{m.permanent ? (m.userId ? "Fiche cliente marquée « L'email ne fonctionne plus », envois futurs annulés." : 'Aucune fiche cliente pour cette adresse.') : 'Erreur temporaire : le serveur réessaie, fiche non modifiée.'}</p>
+                        : m.snippet && <p className="text-[11px] text-[#3B312D]/50 line-clamp-2 break-words">{m.snippet}</p>}
+                      <div className="flex gap-3 mt-1">
+                        {m.userId && onOpenClient && <button onClick={() => onOpenClient(m.userId)} className="text-[11px] text-[#C98F79] hover:underline">Voir la fiche cliente</button>}
+                        {m.kind === 'message' && m.fromEmail && <a href={`mailto:${m.fromEmail}?subject=${encodeURIComponent('Re: ' + (m.subject || ''))}`} className="text-[11px] text-[#C98F79] hover:underline">Répondre</a>}
+                        <button onClick={() => markInbox({ id: m.id, read: !m.read })} className="text-[11px] text-[#3B312D]/50 hover:underline">{m.read ? 'Marquer non lu' : 'Marquer lu'}</button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
