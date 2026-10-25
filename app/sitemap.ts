@@ -1,6 +1,7 @@
 import { MetadataRoute } from 'next';
 import { headers } from 'next/headers';
 import { prisma } from '@/lib/db';
+import { areSubscriptionsEnabled } from '@/lib/site-flags';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,6 +9,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const headersList = headers();
   const host = headersList.get('x-forwarded-host') ?? process.env.NEXTAUTH_URL?.replace(/^https?:\/\//, '') ?? 'holisya.fr';
   const siteUrl = `https://${host}`;
+  const subsEnabled = await areSubscriptionsEnabled();
 
   const base: MetadataRoute.Sitemap = [
     { url: siteUrl, lastModified: new Date(), changeFrequency: 'weekly', priority: 1 },
@@ -18,7 +20,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${siteUrl}/maderotherapie-boulogne-billancourt`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.9 },
     { url: `${siteUrl}/coaching-nutrition-boulogne-billancourt`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.85 },
     { url: `${siteUrl}/cartes-cadeaux`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${siteUrl}/abonnements`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.8 },
+    // /abonnements n'est listé que si la fonctionnalité est activée en admin.
+    ...(subsEnabled ? [{ url: `${siteUrl}/abonnements`, lastModified: new Date(), changeFrequency: 'monthly' as const, priority: 0.8 }] : []),
     { url: `${siteUrl}/blog`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.7 },
     { url: `${siteUrl}/temoignages`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.6 },
     { url: `${siteUrl}/a-propos`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.5 },

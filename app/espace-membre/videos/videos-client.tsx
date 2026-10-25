@@ -12,7 +12,7 @@ function fmtDuration(sec: number) {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-export default function VideosClient({ userEmail }: { userEmail: string }) {
+export default function VideosClient({ userEmail, subscriptionsEnabled = false }: { userEmail: string; subscriptionsEnabled?: boolean }) {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [active, setActive] = useState<any>(null);
@@ -52,7 +52,7 @@ export default function VideosClient({ userEmail }: { userEmail: string }) {
         <p className="text-[#3B312D]/60 mt-3 max-w-xl mx-auto">Des techniques d'auto-massage guidées, à pratiquer chez vous quand vous le souhaitez.</p>
       </div>
 
-      {!data?.premium && (
+      {!data?.premium && subscriptionsEnabled && (
         <div className="bg-gradient-to-r from-[#C98F79] to-[#b87d68] rounded-xl p-5 text-white flex items-center justify-between flex-wrap gap-3 mb-8">
           <div className="flex items-center gap-3">
             <Crown size={22} />
@@ -96,8 +96,10 @@ export default function VideosClient({ userEmail }: { userEmail: string }) {
                     <button onClick={() => buy(v)} disabled={buyingId === v.id} className="w-full py-2.5 bg-[#3B312D] text-white text-sm font-medium rounded-lg flex items-center justify-center gap-2 disabled:opacity-50">
                       {buyingId === v.id ? <Loader2 size={15} className="animate-spin" /> : <Lock size={14} />}Acheter · {(v.priceCents / 100).toFixed(2)}€
                     </button>
-                  ) : (
+                  ) : subscriptionsEnabled ? (
                     <Link href="/abonnements" className="w-full py-2.5 bg-[#AAB7A0] text-white text-sm font-medium rounded-lg flex items-center justify-center gap-2"><Crown size={14} />Réservé aux abonnés</Link>
+                  ) : (
+                    <span className="w-full py-2.5 bg-[#3B312D]/5 text-[#3B312D]/40 text-sm font-medium rounded-lg flex items-center justify-center gap-2 cursor-default"><Lock size={14} />Bientôt disponible</span>
                   )}
                 </div>
               </div>
