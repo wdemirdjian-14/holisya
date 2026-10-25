@@ -1,8 +1,11 @@
 import Header from '@/components/header';
 import Footer from '@/components/footer';
 import GiftCardsClient from './gift-cards-client';
+import PaymentDisabledBanner from '@/components/payment-disabled-banner';
 
 import { withSeoOverride } from '@/lib/seo/meta';
+
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata() {
   return withSeoOverride('/cartes-cadeaux', {
@@ -13,5 +16,5 @@ export async function generateMetadata() {
 }
 
 export default function CartesPage() {
-  return (<><Header /><main className="pt-20"><GiftCardsClient /></main><Footer /></>);
+  return (<><Header /><main className="pt-20"><PaymentDisabledBanner /><GiftCardsClient /></main><Footer /></>);
 }
