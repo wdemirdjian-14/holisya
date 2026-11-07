@@ -4,7 +4,7 @@ import { getSiteContentMap } from '@/lib/site-content';
 import { BUSINESS } from '@/lib/business';
 
 export default async function Footer() {
-  const content = await getSiteContentMap(['footer.description', 'footer.signature']);
+  const content = await getSiteContentMap(['footer.description', 'footer.signature', 'paris.hours']);
   return (
     <footer className="bg-[#3B312D] text-white/80">
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-12">
@@ -18,9 +18,17 @@ export default async function Footer() {
             <div className="space-y-3">
               {BUSINESS.locations.map((loc) => (
                 <div key={loc.name} className="text-sm text-white/60">
-                  <p className="text-white/85 font-medium flex items-center gap-1.5">{loc.name}{loc.comingSoon && <span className="text-[10px] uppercase tracking-wider text-[#C98F79] border border-[#C98F79]/40 rounded px-1.5 py-0.5">Bientôt</span>}</p>
+                  <p className="text-white/85 font-medium flex items-center gap-1.5">
+                    {loc.name}
+                    {loc.primary
+                      ? <span className="text-[10px] uppercase tracking-wider text-[#AAB7A0] border border-[#AAB7A0]/40 rounded px-1.5 py-0.5">Réservation en ligne</span>
+                      : <span className="text-[10px] uppercase tracking-wider text-white/50 border border-white/20 rounded px-1.5 py-0.5">Sur rendez-vous</span>}
+                  </p>
                   <p>{loc.streetAddress}</p>
                   <p>{loc.postalCode} {loc.city}</p>
+                  {!loc.primary && content['paris.hours'] && (
+                    <p className="text-xs text-white/45 mt-0.5 whitespace-pre-line">{content['paris.hours']}</p>
+                  )}
                 </div>
               ))}
             </div>

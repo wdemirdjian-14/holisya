@@ -16,13 +16,31 @@ export default function BookingTab() {
   const [newClosure, setNewClosure] = useState('');
   const [newRange, setNewRange] = useState({ start: '', end: '' });
   const [planityUrl, setPlanityUrl] = useState('');
+  const [parisHours, setParisHours] = useState('');
+  const [savingParis, setSavingParis] = useState(false);
 
   const load = () => {
     setLoading(true);
     Promise.all([
       fetch('/api/admin/booking-settings').then((r) => r.json()),
       fetch('/api/admin/availability').then((r) => r.json()),
-    ]).then(([s, a]) => { setSettings(s?.settings ?? null); setPlanityUrl(s?.settings?.planityUrl ?? ''); setWindows(a?.windows ?? []); setClosures(a?.closures ?? []); setLoading(false); }).catch(() => setLoading(false));
+      fetch('/api/admin/site-content').then((r) => r.json()).catch(() => ({})),
+    ]).then(([s, a, c]) => {
+      setSettings(s?.settings ?? null); setPlanityUrl(s?.settings?.planityUrl ?? '');
+      setWindows(a?.windows ?? []); setClosures(a?.closures ?? []);
+      const pf = (c?.fields ?? []).find((f: any) => f.key === 'paris.hours');
+      setParisHours(pf?.value ?? '');
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  };
+
+  const saveParis = async () => {
+    setSavingParis(true);
+    try {
+      const res = await fetch('/api/admin/site-content', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'paris.hours', value: parisHours }) });
+      if (res.ok) toast.success('Horaires du salon de Paris enregistrés'); else toast.error('Erreur');
+    } catch { toast.error('Erreur'); }
+    setSavingParis(false);
   };
   useEffect(() => { load(); }, []);
 
@@ -66,8 +84,20 @@ export default function BookingTab() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-playfair text-xl font-semibold text-[#3B312D]">Réservation en ligne</h2>
-        <p className="text-xs text-[#3B312D]/50 mt-1">Vos clientes réservent directement sur le site. Vous ouvrez les créneaux et gérez les fermetures.</p>
+        <h2 className="font-playfair text-xl font-semibold text-[#3B312D]">Réservation en ligne — Agenda Antibes</h2>
+        <p className="text-xs text-[#3B312D]/50 mt-1">L'agenda en ligne concerne le salon d'Antibes. Vos clientes réservent directement sur le site ; vous ouvrez les créneaux et gérez les fermetures ci-dessous.</p>
+      </div>
+
+      {/* Salon de Paris (Boulogne) — horaires affichés, sans réservation en ligne */}
+      <div className="bg-white rounded-xl shadow-sm p-5">
+        <h3 className="text-sm font-semibold text-[#3B312D] mb-1 flex items-center gap-2"><Clock size={15} className="text-[#C98F79]" />Salon de Paris (Boulogne) — horaires affichés</h3>
+        <p className="text-xs text-[#3B312D]/50 mb-3">Le salon de Paris n'a plus d'agenda en ligne. Ce texte s'affiche sur le site (pied de page, contact) pour indiquer ses horaires. Les clientes prennent rendez-vous en vous contactant.</p>
+        <textarea value={parisHours} onChange={(e) => setParisHours(e.target.value)} rows={3}
+          placeholder={'Ex : Lundi–Vendredi : 17h–20h\nSamedi : 10h–20h\nSur rendez-vous — nous contacter'}
+          className="w-full px-3 py-2 text-sm border border-[#F8F4EF] rounded-lg bg-[#F8F4EF]/50 text-[#3B312D] resize-none" />
+        <button onClick={saveParis} disabled={savingParis} className="mt-2 px-4 py-2 bg-[#C98F79] text-white text-sm rounded-lg disabled:opacity-50 flex items-center gap-1.5">
+          {savingParis ? <Loader2 size={14} className="animate-spin" /> : <Clock size={14} />}Enregistrer les horaires de Paris
+        </button>
       </div>
 
       {/* Bascule Planity : tous les liens RDV + gros logo animé sur l'accueil */}

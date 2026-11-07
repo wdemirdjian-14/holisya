@@ -33,6 +33,9 @@ export const SITE_CONTENT_REGISTRY: SiteContentField[] = [
   // Footer
   { key: 'footer.description', label: 'Description (colonne 1)', page: 'Pied de page', defaultValue: 'Approche holistique du bien-être féminin. Kobido, drainage lymphatique, nutrition et programmes personnalisés.', multiline: true },
   { key: 'footer.signature', label: 'Signature (bas de page, avant l\'icône cœur)', page: 'Pied de page', defaultValue: 'Fait avec' },
+
+  // Salon de Paris (Boulogne) — horaires affichés (réservation en ligne fermée)
+  { key: 'paris.hours', label: 'Horaires affichés du salon de Paris (Boulogne)', page: 'Salon de Paris', defaultValue: 'Sur rendez-vous — nous contacter', multiline: true },
 ];
 
 export function getDefaultValue(key: string): string {
