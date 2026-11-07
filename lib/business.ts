@@ -18,14 +18,14 @@ export const BUSINESS = {
   // (format https://g.page/r/<code>/review) pour ouvrir directement le dialogue d'avis.
   googleReviewUrl: 'https://g.page/r/CUZKtxs0iAb3EAE/review',
 
-  // --- Localisation (institut à Boulogne-Billancourt) ---
-  streetAddress: '66 Boulevard Jean Jaurès',
-  city: 'Boulogne-Billancourt',
-  postalCode: '92100',
-  region: 'Île-de-France',
+  // --- Localisation (institut principal désormais à ANTIBES) ---
+  streetAddress: '16 Avenue Guillabert',
+  city: 'Antibes',
+  postalCode: '06600',
+  region: "Provence-Alpes-Côte d'Azur",
   country: 'FR',
-  // Coordonnées GPS exactes (fiche Google Maps)
-  geo: { lat: 48.8401573, lng: 2.2394942 },
+  // Coordonnées GPS exactes (16 Avenue Guillabert, Antibes)
+  geo: { lat: 43.578738, lng: 7.121217 },
 
   // --- Contact ---
   email: 'contact@holisya.fr',
@@ -33,15 +33,16 @@ export const BUSINESS = {
   phoneDisplay: '06 18 26 43 46',
   whatsapp: '',                   // laissé vide : activer seulement si ce numéro a WhatsApp
 
-  // --- Horaires (openingHoursSpecification) ---
-  // days : 'Monday'..'Sunday'
+  // --- Horaires d'ouverture Antibes (openingHoursSpecification) ---
+  // Reflètent l'agenda de réservation en ligne. days : 'Monday'..'Sunday'
   hours: [
-    { days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'], open: '17:00', close: '20:00' },
-    { days: ['Saturday'], open: '10:00', close: '20:00' },
+    { days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday'], open: '10:30', close: '21:00' },
+    { days: ['Friday'], open: '10:00', close: '17:00' },
+    { days: ['Sunday'], open: '12:00', close: '21:00' },
   ] as { days: string[]; open: string; close: string }[],
 
-  // --- Zone desservie (pour le SEO local Paris + Ouest parisien) ---
-  areaServed: ['Boulogne-Billancourt', 'Paris', 'Paris 16e', 'Paris 15e', 'Hauts-de-Seine'],
+  // --- Zone desservie (SEO local Antibes / Côte d'Azur) ---
+  areaServed: ['Antibes', 'Juan-les-Pins', 'Antibes Juan-les-Pins', 'Biot', 'Vallauris', 'Cannes', 'Alpes-Maritimes', "Côte d'Azur"],
 
   priceRange: '€€',
   bookingUrl: `${SITE_URL}/rendez-vous`,
@@ -54,10 +55,11 @@ export const BUSINESS = {
   ] as string[],
 
   // --- Salons (adresses affichées sur le site) ---
+  // Antibes = salon principal avec réservation en ligne. Paris = sur rendez-vous (agenda en ligne fermé).
   locations: [
-    { name: 'Boulogne-Billancourt', streetAddress: '66 Boulevard Jean Jaurès', postalCode: '92100', city: 'Boulogne-Billancourt', comingSoon: false },
-    { name: 'Antibes', streetAddress: '16 Avenue Guillabert', postalCode: '06600', city: 'Antibes', comingSoon: true },
-  ] as { name: string; streetAddress: string; postalCode: string; city: string; comingSoon: boolean }[],
+    { name: 'Antibes', streetAddress: '16 Avenue Guillabert', postalCode: '06600', city: 'Antibes', comingSoon: false, primary: true, booking: true, note: 'Réservation en ligne ouverte' },
+    { name: 'Boulogne-Billancourt (Paris)', streetAddress: '66 Boulevard Jean Jaurès', postalCode: '92100', city: 'Boulogne-Billancourt', comingSoon: false, primary: false, booking: false, note: 'Agenda en ligne fermé — sur rendez-vous, nous contacter' },
+  ] as { name: string; streetAddress: string; postalCode: string; city: string; comingSoon: boolean; primary?: boolean; booking?: boolean; note?: string }[],
 
   // Prestations phares (prix TTC) — alimentent le catalogue d'offres du balisage
   services: [

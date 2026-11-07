@@ -107,6 +107,9 @@
 /* Smooth scrolling */
 html { scroll-behavior: smooth; }
 
+/* Bandeau d'annonce épinglé : décale tout le contenu vers le bas de sa hauteur. */
+html[data-ann="1"] body { padding-top: var(--ann-h, 0px); }
+
 /* Confort tactile mobile */
 button, a { -webkit-tap-highlight-color: transparent; }
 @media (max-width: 1023px) {

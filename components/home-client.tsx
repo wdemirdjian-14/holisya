@@ -7,6 +7,7 @@ import { ArrowRight, Sparkles, Leaf, Heart, Star, Calendar, Gift, Users, Chevron
 import { useInView } from 'react-intersection-observer';
 import GalleryCarousel from '@/components/gallery-carousel';
 import PlanityHeroBadge from '@/components/planity-hero-badge';
+import { BUSINESS } from '@/lib/business';
 
 function CountUp({ end, suffix = '' }: { end: number; suffix?: string }) {
   const [count, setCount] = useState(0);
@@ -111,6 +112,32 @@ export default function HomeClient({ galleryPhotos = [], latestPosts = [], conte
           className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10">
           <div className="w-6 h-10 border-2 border-white/30 rounded-full flex justify-center"><div className="w-1.5 h-3 bg-white/50 rounded-full mt-2 animate-bounce" /></div>
         </motion.div>
+      </section>
+
+      {/* Annonce ouverture Antibes */}
+      <section className="py-14 sm:py-16 bg-gradient-to-br from-[#C98F79] to-[#b87d68] text-white">
+        <div className="max-w-[900px] mx-auto px-4 text-center">
+          <p className="inline-flex items-center gap-2 text-xs sm:text-sm uppercase tracking-[0.2em] font-medium bg-white/15 rounded-full px-4 py-1.5">
+            <Sparkles size={15} /> Nouveau · Côte d'Azur
+          </p>
+          <h2 className="font-playfair text-3xl sm:text-4xl md:text-5xl font-bold mt-4 leading-tight">
+            Holisya ouvre à Antibes
+          </h2>
+          <p className="text-white/90 mt-4 text-lg max-w-2xl mx-auto">
+            Soyez les premières à réserver les prestations d'Holisya à Antibes — Kobido, drainage lymphatique,
+            madérothérapie et coaching nutrition. Notre agenda est ouvert&nbsp;!
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3 mt-7">
+            <Link href="/rendez-vous" className="inline-flex items-center gap-2 px-8 py-4 bg-white text-[#b87d68] font-semibold rounded-lg hover:bg-white/90 transition-all shadow-lg">
+              <Calendar size={18} /> Réserver un créneau
+            </Link>
+            <span className="text-white/80 text-sm">16 Avenue Guillabert, 06600 Antibes</span>
+          </div>
+          <p className="text-white/70 text-xs sm:text-sm mt-6 border-t border-white/20 pt-5 max-w-xl mx-auto">
+            Agenda de Paris (Boulogne-Billancourt) fermé à la réservation en ligne. Pour un soin à Paris,
+            <a href={`tel:${BUSINESS.phone}`} className="underline font-medium hover:text-white"> contactez-nous directement</a>.
+          </p>
+        </div>
       </section>
 
       {/* Stats Section */}

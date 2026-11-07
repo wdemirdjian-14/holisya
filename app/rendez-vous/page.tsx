@@ -9,8 +9,8 @@ import { withSeoOverride } from '@/lib/seo/meta';
 
 export async function generateMetadata() {
   return withSeoOverride('/rendez-vous', {
-    title: 'Prendre Rendez-vous',
-    description: "Réservez votre soin en ligne chez Holisya à Boulogne-Billancourt : Kobido, drainage lymphatique, Madero Sculpt. Choisissez votre créneau en quelques clics.",
+    title: 'Prendre Rendez-vous à Antibes',
+    description: "Réservez votre soin en ligne chez Holisya à Antibes : Kobido, drainage lymphatique, madérothérapie, coaching nutrition. Choisissez votre créneau en quelques clics.",
     alternates: { canonical: '/rendez-vous' },
   });
 }
