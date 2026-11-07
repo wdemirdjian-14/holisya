@@ -9,7 +9,7 @@ import { withSeoOverride } from '@/lib/seo/meta';
 export async function generateMetadata() {
   return withSeoOverride('/a-propos', {
     title: 'À Propos',
-    description: "Découvrez Holisya et sa fondatrice Lamyae : une approche holistique du bien-être féminin à Boulogne-Billancourt, entre Kobido japonais, drainage lymphatique et nutrition.",
+    description: "Découvrez Holisya et sa fondatrice Lamyae : une approche holistique du bien-être féminin à Antibes, entre Kobido japonais, drainage lymphatique et nutrition.",
     alternates: { canonical: '/a-propos' },
   });
 }

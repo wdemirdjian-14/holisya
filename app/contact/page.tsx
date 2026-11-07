@@ -6,7 +6,7 @@ import { withSeoOverride } from '@/lib/seo/meta';
 export async function generateMetadata() {
   return withSeoOverride('/contact', {
     title: 'Contact',
-    description: "Contacter Holisya, institut de bien-être à Boulogne-Billancourt : adresse, téléphone, horaires et accès. Prenez rendez-vous pour un soin Kobido ou un drainage lymphatique.",
+    description: "Contacter Holisya, institut de bien-être à Antibes : adresse, téléphone, horaires et accès. Prenez rendez-vous pour un soin Kobido ou un drainage lymphatique.",
     alternates: { canonical: '/contact' },
   });
 }

@@ -28,20 +28,20 @@ export const viewport = {
 export async function generateMetadata() {
   const siteUrl = process.env.NEXTAUTH_URL ?? 'https://holisya.fr';
   const override = await getMetaOverride('/'); // titre/description éditables en admin (page d'accueil)
-  const defaultTitle = override.title || 'Massage & Kobido à Boulogne-Billancourt (92) | Holisya';
+  const defaultTitle = override.title || 'Massage & Kobido à Antibes (06) | Holisya';
   const defaultDescription = override.description ||
-    "Institut de massage à Boulogne-Billancourt (92), aux portes de Paris : Kobido (lifting naturel), drainage lymphatique et soin du visage. Noté 5,0 ★. Réservez en ligne 7j/7.";
+    "Institut de bien-être à Antibes : massage du visage Kobido (lifting naturel), drainage lymphatique, madérothérapie et coaching nutrition. Réservez votre soin en ligne 7j/7 sur la Côte d'Azur.";
   return {
     metadataBase: new URL(siteUrl),
     title: {
       default: defaultTitle,
-      template: '%s | Holisya Boulogne-Billancourt',
+      template: '%s | Holisya Antibes',
     },
     description: defaultDescription,
     keywords: [
-      'massage Kobido Boulogne-Billancourt', 'massage Kobido Paris', 'massage visage Boulogne',
-      'drainage lymphatique Boulogne-Billancourt', 'lifting naturel visage Paris',
-      'institut bien-être Boulogne', 'soin visage anti-âge Paris', 'Madero Sculpt Boulogne',
+      'massage Kobido Antibes', 'massage visage Antibes', 'institut bien-être Antibes',
+      'drainage lymphatique Antibes', 'madérothérapie Antibes', 'lifting naturel visage Antibes',
+      'soin visage anti-âge Antibes', 'massage Juan-les-Pins', 'massage Côte d\'Azur',
     ],
     alternates: { canonical: '/' },
     manifest: '/manifest.webmanifest',

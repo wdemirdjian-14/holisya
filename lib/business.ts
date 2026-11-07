@@ -36,9 +36,9 @@ export const BUSINESS = {
   // --- Horaires d'ouverture Antibes (openingHoursSpecification) ---
   // Reflètent l'agenda de réservation en ligne. days : 'Monday'..'Sunday'
   hours: [
-    { days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday'], open: '10:30', close: '21:00' },
-    { days: ['Friday'], open: '10:00', close: '17:00' },
-    { days: ['Sunday'], open: '12:00', close: '21:00' },
+    { days: ['Monday'], open: '12:00', close: '21:00' },
+    { days: ['Tuesday', 'Wednesday', 'Thursday', 'Friday'], open: '10:30', close: '21:00' },
+    { days: ['Saturday'], open: '10:00', close: '17:00' },
   ] as { days: string[]; open: string; close: string }[],
 
   // --- Zone desservie (SEO local Antibes / Côte d'Azur) ---

@@ -14,11 +14,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base: MetadataRoute.Sitemap = [
     { url: siteUrl, lastModified: new Date(), changeFrequency: 'weekly', priority: 1 },
     { url: `${siteUrl}/services`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.9 },
-    { url: `${siteUrl}/massage-kobido-boulogne-billancourt`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.9 },
-    { url: `${siteUrl}/massage-kobido-paris`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.9 },
-    { url: `${siteUrl}/drainage-lymphatique-boulogne-billancourt`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.9 },
-    { url: `${siteUrl}/maderotherapie-boulogne-billancourt`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.9 },
-    { url: `${siteUrl}/coaching-nutrition-boulogne-billancourt`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.85 },
+    // Pages locales Antibes (lieu principal)
+    { url: `${siteUrl}/massage-kobido-antibes`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.9 },
+    { url: `${siteUrl}/drainage-lymphatique-antibes`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.9 },
+    { url: `${siteUrl}/maderotherapie-antibes`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.9 },
+    { url: `${siteUrl}/coaching-nutrition-antibes`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.85 },
+    // Pages locales Paris (salon secondaire, sur contact)
+    { url: `${siteUrl}/massage-kobido-boulogne-billancourt`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.7 },
+    { url: `${siteUrl}/massage-kobido-paris`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.7 },
+    { url: `${siteUrl}/drainage-lymphatique-boulogne-billancourt`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${siteUrl}/maderotherapie-boulogne-billancourt`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${siteUrl}/coaching-nutrition-boulogne-billancourt`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.6 },
     { url: `${siteUrl}/cartes-cadeaux`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.8 },
     // /abonnements n'est listé que si la fonctionnalité est activée en admin.
     ...(subsEnabled ? [{ url: `${siteUrl}/abonnements`, lastModified: new Date(), changeFrequency: 'monthly' as const, priority: 0.8 }] : []),

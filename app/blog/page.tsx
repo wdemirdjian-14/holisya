@@ -9,7 +9,7 @@ import { withSeoOverride } from '@/lib/seo/meta';
 export async function generateMetadata() {
   return withSeoOverride('/blog', {
     title: 'Blog bien-être',
-    description: "Conseils bien-être Holisya : Kobido et lifting naturel, self-care, drainage lymphatique, nutrition. Nos articles pour prendre soin de vous à Boulogne-Billancourt et Paris.",
+    description: "Conseils bien-être Holisya : Kobido et lifting naturel, self-care, drainage lymphatique, nutrition. Nos articles pour prendre soin de vous à Antibes et sur la Côte d'Azur.",
     alternates: { canonical: '/blog' },
   });
 }

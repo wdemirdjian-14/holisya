@@ -37,11 +37,11 @@ export default async function Footer() {
           <div>
             <h4 className="font-playfair text-lg font-semibold text-white mb-3">Nos spécialités</h4>
             <div className="space-y-2">
-              <Link href="/massage-kobido-boulogne-billancourt" className="block text-sm hover:text-[#C98F79] transition-colors">Massage Kobido Boulogne</Link>
+              <Link href="/massage-kobido-antibes" className="block text-sm hover:text-[#C98F79] transition-colors">Massage Kobido Antibes</Link>
+              <Link href="/drainage-lymphatique-antibes" className="block text-sm hover:text-[#C98F79] transition-colors">Drainage lymphatique Antibes</Link>
+              <Link href="/maderotherapie-antibes" className="block text-sm hover:text-[#C98F79] transition-colors">Madérothérapie Antibes</Link>
+              <Link href="/coaching-nutrition-antibes" className="block text-sm hover:text-[#C98F79] transition-colors">Coaching nutrition Antibes</Link>
               <Link href="/massage-kobido-paris" className="block text-sm hover:text-[#C98F79] transition-colors">Massage Kobido Paris</Link>
-              <Link href="/drainage-lymphatique-boulogne-billancourt" className="block text-sm hover:text-[#C98F79] transition-colors">Drainage lymphatique</Link>
-              <Link href="/maderotherapie-boulogne-billancourt" className="block text-sm hover:text-[#C98F79] transition-colors">Madérothérapie</Link>
-              <Link href="/coaching-nutrition-boulogne-billancourt" className="block text-sm hover:text-[#C98F79] transition-colors">Coaching nutrition</Link>
             </div>
           </div>
           <div>

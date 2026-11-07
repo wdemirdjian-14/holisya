@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 export async function generateMetadata() {
   return withSeoOverride('/cartes-cadeaux', {
     title: 'Cartes Cadeaux',
-    description: "Offrez un moment de bien-être : carte cadeau Holisya valable 6 mois sur tous nos soins (Kobido, drainage lymphatique, Madero Sculpt) à Boulogne-Billancourt.",
+    description: "Offrez un moment de bien-être : carte cadeau Holisya valable 6 mois sur tous nos soins (Kobido, drainage lymphatique, madérothérapie) à Antibes.",
     alternates: { canonical: '/cartes-cadeaux' },
   });
 }

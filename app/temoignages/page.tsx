@@ -9,7 +9,7 @@ import { withSeoOverride } from '@/lib/seo/meta';
 export async function generateMetadata() {
   return withSeoOverride('/temoignages', {
     title: 'Témoignages',
-    description: "Les avis de nos clientes sur les soins Holisya à Boulogne-Billancourt : Kobido, drainage lymphatique, Madero Sculpt. Découvrez leurs retours d'expérience.",
+    description: "Les avis de nos clientes sur les soins Holisya à Antibes : Kobido, drainage lymphatique, madérothérapie. Découvrez leurs retours d'expérience.",
     alternates: { canonical: '/temoignages' },
   });
 }

@@ -21,7 +21,7 @@ export default function LocalBusinessJsonLd() {
     '@id': `${SITE_URL}/#business`,
     name: BUSINESS.name,
     description:
-      "Institut de bien-être féminin à Boulogne-Billancourt : massage du visage Kobido, drainage lymphatique, Madero Sculpt et coaching nutrition. Sur rendez-vous, à deux pas de Paris.",
+      "Institut de bien-être féminin à Antibes : massage du visage Kobido, drainage lymphatique, madérothérapie (Madero Sculpt) et coaching nutrition. Sur rendez-vous, sur la Côte d'Azur.",
     url: SITE_URL,
     image: BUSINESS.image,
     logo: `${SITE_URL}/images/logo-holisya.png`,
