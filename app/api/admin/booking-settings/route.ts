@@ -37,6 +37,7 @@ export async function PUT(req: NextRequest) {
         emailWindowStart: d?.emailWindowStart !== undefined ? num(d.emailWindowStart, 8) : undefined,
         emailWindowEnd: d?.emailWindowEnd !== undefined ? num(d.emailWindowEnd, 21) : undefined,
         requireCardImprint: d?.requireCardImprint,
+        allowOnlinePayment: typeof d?.allowOnlinePayment === 'boolean' ? d.allowOnlinePayment : undefined,
         autoConfirm: d?.autoConfirm,
         slotGranularityMin: d?.slotGranularityMin !== undefined ? num(d.slotGranularityMin, 15) : undefined,
         minNoticeHours: d?.minNoticeHours !== undefined ? num(d.minNoticeHours, 2) : undefined,

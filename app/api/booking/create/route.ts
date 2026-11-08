@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     if (!session?.user) return NextResponse.json({ error: 'Connexion requise', needLogin: true }, { status: 401 });
     const userId = (session.user as any)?.id ?? '';
 
-    const { serviceId, date, time } = await request.json();
+    const { serviceId, date, time, method } = await request.json();
     if (!serviceId || !date || !time) return NextResponse.json({ error: 'Paramètres manquants' }, { status: 400 });
 
     const settings = await getBookingSettings();
@@ -28,8 +28,11 @@ export async function POST(request: Request) {
     if (!slots.includes(time)) return NextResponse.json({ error: 'Ce créneau n\'est plus disponible' }, { status: 409 });
 
     const startDate = dateStrToLocal(date, toMinutes(time));
-    const priorCount = await prisma.appointment.count({ where: { userId } });
-    const isNewClient = priorCount === 0;
+
+    // Cliente de confiance (cochée en admin) : aucune empreinte ni paiement exigé.
+    const bookingUser = await prisma.user.findUnique({ where: { id: userId }, select: { exemptCardImprint: true } });
+    const exempt = !!bookingUser?.exemptCardImprint;
+    const needsSecure = settings.requireCardImprint && !exempt;
 
     const finalStatus = settings.autoConfirm ? 'CONFIRMED' : 'PENDING';
 
@@ -37,9 +40,25 @@ export async function POST(request: Request) {
       data: { userId, serviceType: service.name, therapist: 'Lamyae', date: startDate, duration: service.duration || 60, status: finalStatus, source: 'online', notes: 'Réservation en ligne' },
     });
 
-    // Empreinte bancaire pour les nouveaux clients (carte enregistrée, non débitée).
-    if (settings.requireCardImprint && isNewClient) {
+    if (needsSecure) {
       const origin = request.headers.get('origin') ?? (process.env.NEXTAUTH_URL ?? '');
+      const allowPay = (settings as any).allowOnlinePayment ?? false;
+      // Paiement en ligne du prix total (si proposé et choisi par la cliente).
+      if (method === 'pay' && allowPay && (service.price ?? 0) > 0) {
+        const checkout = await stripe.checkout.sessions.create({
+          mode: 'payment',
+          payment_method_types: ['card'],
+          line_items: [{
+            quantity: 1,
+            price_data: { currency: 'eur', unit_amount: Math.round((service.price || 0) * 100), product_data: { name: service.name } },
+          }],
+          success_url: `${origin}/rendez-vous/confirmation?paid={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${origin}/rendez-vous/confirmation?cancelled=${appt.id}`,
+          metadata: { type: 'booking_payment', appointmentId: appt.id, userId },
+        });
+        return NextResponse.json({ requiresPayment: true, url: checkout?.url ?? '', appointmentId: appt.id });
+      }
+      // Sinon : empreinte bancaire (carte enregistrée, non débitée).
       const checkout = await stripe.checkout.sessions.create({
         mode: 'setup',
         payment_method_types: ['card'],

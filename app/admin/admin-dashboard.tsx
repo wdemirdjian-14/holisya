@@ -1472,6 +1472,10 @@ export default function AdminDashboard() {
                 <p className="text-[11px] text-[#3B312D]/40 -mt-1">Le code postal sert au ciblage par région dans les campagnes (75/77/78/91-95 = Île-de-France).</p>
                 <div><label className="text-sm font-medium text-[#3B312D]/70">Crédits</label>
                   <input type="number" value={modalData?.credits ?? 0} onChange={(e: any) => setModalData({...(modalData ?? {}), credits: parseInt(e.target?.value ?? '0')})} className="w-full mt-1 px-4 py-3 text-sm border border-[#F8F4EF] rounded-lg bg-[#F8F4EF]/50 text-[#3B312D]" /></div>
+                <label className="flex items-start justify-between gap-3 bg-[#F8F4EF]/50 rounded-lg px-4 py-3 cursor-pointer">
+                  <span className="text-sm text-[#3B312D] flex items-start gap-2"><Lock size={16} className="text-[#C98F79] mt-0.5" /><span><strong>Cliente de confiance — pas d'empreinte / paiement</strong><br /><span className="text-xs text-[#3B312D]/50">Lors d'une réservation en ligne, cette cliente ne verra ni empreinte bancaire ni paiement : son créneau est réservé directement.</span></span></span>
+                  <input type="checkbox" checked={!!modalData?.exemptCardImprint} onChange={(e: any) => setModalData({...(modalData ?? {}), exemptCardImprint: e.target?.checked})} className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                </label>
                 <button onClick={() => handleSave('clients', modalData, 'PUT')} disabled={saving}
                   className="w-full py-3 bg-[#C98F79] text-white font-medium rounded-lg disabled:opacity-50">{saving ? 'Enregistrement...' : 'Enregistrer'}</button>
               </div>

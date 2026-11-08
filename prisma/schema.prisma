@@ -52,6 +52,7 @@ model User {
   source         String    @default("signup")
   emailOptOut    Boolean   @default(false)
   emailBounced   Boolean   @default(false)
+  exemptCardImprint Boolean @default(false) // cliente de confiance : ni empreinte ni paiement exigé en ligne
   unsubscribeToken String? @unique
   privateNotes   String    @default("")
   loyaltyPoints  Int       @default(0)
@@ -93,6 +94,7 @@ model Appointment {
   clientRequestNote String       @default("")
   source      String            @default("admin")
   imprintSetupId String         @default("")
+  onlinePaymentRef String       @default("")
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
 
@@ -477,6 +479,7 @@ model BookingSettings {
   emailWindowStart     Int      @default(8)
   emailWindowEnd       Int      @default(21)
   requireCardImprint   Boolean  @default(false)
+  allowOnlinePayment   Boolean  @default(false) // propose « payer en ligne » (prix total) en plus de l'empreinte
   autoConfirm          Boolean  @default(false)
   slotGranularityMin   Int      @default(15)
   minNoticeHours       Int      @default(2)

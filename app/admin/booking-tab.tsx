@@ -150,9 +150,15 @@ export default function BookingTab() {
           <input type="checkbox" checked={settings.autoConfirm} onChange={(e) => saveSettings({ autoConfirm: e.target.checked })} className="w-5 h-5 flex-shrink-0" />
         </label>
         <label className="flex items-center justify-between gap-4 pt-3 border-t border-[#F8F4EF]">
-          <span className="text-sm text-[#3B312D] flex items-start gap-2"><CreditCard size={16} className="text-[#C98F79] mt-0.5" /><span><strong>Empreinte bancaire pour les nouveaux clients</strong><br /><span className="text-xs text-[#3B312D]/50">Carte enregistrée (non débitée) pour valider le créneau — anti no-show.</span></span></span>
+          <span className="text-sm text-[#3B312D] flex items-start gap-2"><CreditCard size={16} className="text-[#C98F79] mt-0.5" /><span><strong>Sécuriser les réservations (empreinte / paiement)</strong><br /><span className="text-xs text-[#3B312D]/50">À la réservation en ligne, chaque cliente laisse une empreinte bancaire (non débitée) ou paie. Exceptions : les clientes cochées « de confiance » dans leur fiche réservent sans rien.</span></span></span>
           <input type="checkbox" checked={settings.requireCardImprint} onChange={(e) => saveSettings({ requireCardImprint: e.target.checked })} className="w-5 h-5 flex-shrink-0" />
         </label>
+        {settings.requireCardImprint && (
+          <label className="flex items-center justify-between gap-4 pl-6">
+            <span className="text-sm text-[#3B312D] flex items-start gap-2"><CreditCard size={16} className="text-[#AAB7A0] mt-0.5" /><span><strong>Proposer aussi le paiement en ligne</strong><br /><span className="text-xs text-[#3B312D]/50">La cliente choisit : empreinte (non débitée) ou régler le prix total du soin en ligne. L'encaissement apparaît alors en caisse.</span></span></span>
+            <input type="checkbox" checked={!!settings.allowOnlinePayment} onChange={(e) => saveSettings({ allowOnlinePayment: e.target.checked })} className="w-5 h-5 flex-shrink-0" />
+          </label>
+        )}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-[#F8F4EF]">
           <div><label className="text-xs text-[#3B312D]/60">Pas des créneaux (min)</label><input type="number" min={5} step={5} value={settings.slotGranularityMin} onChange={(e) => setSettings({ ...settings, slotGranularityMin: e.target.value })} onBlur={() => saveSettings({ slotGranularityMin: settings.slotGranularityMin })} className={num} /></div>
           <div><label className="text-xs text-[#3B312D]/60">Pause entre RDV (min)</label><input type="number" min={0} value={settings.breakMinutes} onChange={(e) => setSettings({ ...settings, breakMinutes: e.target.value })} onBlur={() => saveSettings({ breakMinutes: settings.breakMinutes })} className={num} /></div>

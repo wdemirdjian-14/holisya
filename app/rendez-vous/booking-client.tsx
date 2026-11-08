@@ -47,35 +47,36 @@ export default function BookingClient() {
     fetch(`/api/booking/slots?serviceId=${service.id}&date=${dateStr}`).then((r) => r.json()).then((d) => { setSlots(d?.slots ?? []); setSlotsLoading(false); }).catch(() => setSlotsLoading(false));
   };
 
-  const submitBooking = async (over?: { serviceId: string; date: string; slot: string }) => {
+  const submitBooking = async (over?: { serviceId: string; date: string; slot: string }, method?: 'imprint' | 'pay') => {
     const serviceId = over?.serviceId ?? service?.id;
     const d0 = over?.date ?? date;
     const t0 = over?.slot ?? slot;
     if (!serviceId || !d0 || !t0) return;
     setConfirming(true);
     try {
-      const res = await fetch('/api/booking/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ serviceId, date: d0, time: t0 }) });
+      const res = await fetch('/api/booking/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ serviceId, date: d0, time: t0, method }) });
       const d = await res.json();
       if (res.status === 401 && d?.needLogin) {
-        try { localStorage.setItem('holisya_pending_booking', JSON.stringify({ serviceId, date: d0, slot: t0 })); } catch {}
+        try { localStorage.setItem('holisya_pending_booking', JSON.stringify({ serviceId, date: d0, slot: t0, method })); } catch {}
         router.push(`/connexion?callbackUrl=${encodeURIComponent('/rendez-vous')}`); return;
       }
-      if (res.ok && d?.requiresImprint && d?.url) { window.location.href = d.url; return; }
+      // Redirection Stripe : empreinte (setup) ou paiement en ligne
+      if (res.ok && (d?.requiresImprint || d?.requiresPayment) && d?.url) { window.location.href = d.url; return; }
       if (res.ok) { setDoneStatus(d?.status ?? 'PENDING'); setStep('done'); }
       else toast.error(d?.error ?? 'Erreur');
     } catch { toast.error('Erreur'); }
     setConfirming(false);
   };
 
-  const confirm = async () => {
+  const confirm = async (method?: 'imprint' | 'pay') => {
     if (!service || !date || !slot) return;
-    // Non connecté : on mémorise le créneau puis on redirige vers la connexion/inscription.
+    // Non connecté : on mémorise le créneau (et le choix) puis on redirige vers la connexion/inscription.
     if (!session?.user) {
-      try { localStorage.setItem('holisya_pending_booking', JSON.stringify({ serviceId: service.id, date, slot })); } catch {}
+      try { localStorage.setItem('holisya_pending_booking', JSON.stringify({ serviceId: service.id, date, slot, method })); } catch {}
       router.push(`/connexion?callbackUrl=${encodeURIComponent('/rendez-vous')}`);
       return;
     }
-    submitBooking();
+    submitBooking(undefined, method);
   };
 
   // Au retour de connexion/inscription : on restaure le créneau conservé et on finalise.
@@ -93,7 +94,7 @@ export default function BookingClient() {
     if (svc) {
       setService(svc); setDate(pending.date); setSlot(pending.slot); setStep('slot');
       toast.success('Votre créneau a été conservé, finalisation de votre rendez-vous…');
-      submitBooking({ serviceId: pending.serviceId, date: pending.date, slot: pending.slot });
+      submitBooking({ serviceId: pending.serviceId, date: pending.date, slot: pending.slot }, pending.method);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, authStatus, config, session]);
@@ -221,20 +222,40 @@ export default function BookingClient() {
                 ))}
               </div>
             )}
-            {slot && (
+            {slot && (() => {
+              const secured = config?.requireCardImprint && !config?.cardExempt;
+              const price = Number(service?.price ?? 0);
+              const canPay = secured && config?.allowOnlinePayment && price > 0;
+              const dateLbl = new Date(date + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+              return (
               <div className="mt-6 pt-5 border-t border-[#F8F4EF]">
                 {!session?.user && authStatus !== 'loading' && (
                   <p className="text-xs text-[#3B312D]/60 mb-3 text-center">Vous devez être connectée pour finaliser. Vous serez redirigée puis pourrez confirmer.</p>
                 )}
-                {config?.requireCardImprint && (
-                  <p className="text-xs text-[#3B312D]/60 mb-3 flex items-center justify-center gap-1.5"><CreditCard size={13} className="text-[#C98F79]" />Une empreinte bancaire (non débitée) pourra être demandée pour les nouvelles clientes.</p>
+                {secured ? (
+                  <div className="space-y-2">
+                    <p className="text-xs text-[#3B312D]/60 mb-1 flex items-center justify-center gap-1.5 text-center"><CreditCard size={13} className="text-[#C98F79]" />Pour garantir votre créneau, choisissez :</p>
+                    {canPay && (
+                      <button onClick={() => confirm('pay')} disabled={confirming} className="w-full py-3.5 bg-[#C98F79] text-white font-medium rounded-lg disabled:opacity-50 flex items-center justify-center gap-2">
+                        {confirming ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                        Payer en ligne {price.toFixed(0)} € et réserver
+                      </button>
+                    )}
+                    <button onClick={() => confirm('imprint')} disabled={confirming} className={`w-full py-3.5 font-medium rounded-lg disabled:opacity-50 flex items-center justify-center gap-2 ${canPay ? 'bg-white border border-[#C98F79]/50 text-[#C98F79] hover:bg-[#C98F79]/5' : 'bg-[#C98F79] text-white'}`}>
+                        {confirming ? <Loader2 size={16} className="animate-spin" /> : <CreditCard size={16} />}
+                        {canPay ? 'Empreinte bancaire (sans débit)' : 'Réserver avec empreinte bancaire'}
+                    </button>
+                    <p className="text-[11px] text-[#3B312D]/40 text-center">L'empreinte enregistre votre carte <strong>sans aucun débit</strong> — vous réglez sur place. {canPay ? 'Le paiement en ligne règle le soin à l’avance.' : ''}</p>
+                  </div>
+                ) : (
+                  <button onClick={() => confirm()} disabled={confirming} className="w-full py-3.5 bg-[#C98F79] text-white font-medium rounded-lg disabled:opacity-50 flex items-center justify-center gap-2">
+                    {confirming ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                    Réserver le {dateLbl} à {slot}
+                  </button>
                 )}
-                <button onClick={confirm} disabled={confirming} className="w-full py-3.5 bg-[#C98F79] text-white font-medium rounded-lg disabled:opacity-50 flex items-center justify-center gap-2">
-                  {confirming ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
-                  Réserver le {new Date(date + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} à {slot}
-                </button>
               </div>
-            )}
+              );
+            })()}
           </div>
         </div>
       )}
