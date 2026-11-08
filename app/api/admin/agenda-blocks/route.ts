@@ -33,6 +33,19 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ block });
 }
 
+// PUT { id, date?: ISO, duration?: number } → déplace / redimensionne un bloc
+export async function PUT(req: NextRequest) {
+  if (!(await guard())) return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
+  const d = await req.json();
+  if (!d?.id) return NextResponse.json({ error: 'ID requis' }, { status: 400 });
+  const data: any = {};
+  if (d?.date) { const date = new Date(d.date); if (isNaN(date.getTime())) return NextResponse.json({ error: 'Date invalide' }, { status: 400 }); data.date = date; }
+  if (d?.duration !== undefined) data.duration = Math.max(15, parseInt(d.duration) || 60);
+  const block = await prisma.agendaBlock.update({ where: { id: d.id }, data }).catch(() => null);
+  if (!block) return NextResponse.json({ error: 'Introuvable' }, { status: 404 });
+  return NextResponse.json({ block });
+}
+
 export async function DELETE(req: NextRequest) {
   if (!(await guard())) return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
   const id = req.nextUrl.searchParams.get('id');
