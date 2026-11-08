@@ -522,6 +522,18 @@ model AvailabilityClosure {
   createdAt DateTime @default(now())
 }
 
+// Indisponibilité ponctuelle saisie manuellement dans l'agenda (pause, perso…).
+// Bloque le créneau comme un RDV, mais sans client.
+model AgendaBlock {
+  id        String   @id @default(cuid())
+  date      DateTime
+  duration  Int      @default(60)
+  reason    String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([date])
+}
+
 model Segment {
   id        String   @id @default(cuid())
   name      String

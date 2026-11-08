@@ -44,7 +44,7 @@ type Tab = 'overview' | 'caisse' | 'clients' | 'appointments' | 'booking' | 'gif
 export default function AdminDashboard() {
   const { data: session, status } = useSession() || {};
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<Tab>('overview');
+  const [activeTab, setActiveTab] = useState<Tab>('appointments');
   // Lien direct vers un onglet (ex. notification « Nouveau mail » → /admin?tab=emails&section=inbox).
   const searchParams = useSearchParams();
   const urlTab = searchParams?.get('tab') as Tab | null;

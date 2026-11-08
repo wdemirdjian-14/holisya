@@ -8,11 +8,18 @@ export async function getBookingSettings() {
 async function busyForDay(dayStr: string) {
   const start = dateStrToLocal(dayStr, 0);
   const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
-  const appts = await prisma.appointment.findMany({
-    where: { status: { in: ['PENDING', 'CONFIRMED'] }, date: { gte: start, lt: end } },
-    select: { date: true, duration: true },
-  });
-  return appts.map((a) => {
+  const [appts, blocks] = await Promise.all([
+    prisma.appointment.findMany({
+      where: { status: { in: ['PENDING', 'CONFIRMED'] }, date: { gte: start, lt: end } },
+      select: { date: true, duration: true },
+    }),
+    // Indisponibilités manuelles (pauses, perso) saisies dans l'agenda
+    prisma.agendaBlock.findMany({
+      where: { date: { gte: start, lt: end } },
+      select: { date: true, duration: true },
+    }).catch(() => [] as { date: Date; duration: number }[]),
+  ]);
+  return [...appts, ...blocks].map((a) => {
     const d = new Date(a.date);
     const startMin = d.getHours() * 60 + d.getMinutes();
     return { startMin, endMin: startMin + (a.duration || 60) };

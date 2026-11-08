@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Settings, X, Loader2, Euro, Clock, Copy, Ban, Sparkles, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Settings, X, Loader2, Euro, Clock, Copy, Ban, Sparkles, Trash2, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 
 function startOfWeek(date: Date): Date {
@@ -37,8 +37,26 @@ function daySummary(wins: { startTime: string; endTime: string }[]): string {
   return `${sorted[0].startTime}–${sorted[sorted.length - 1].endTime} (${sorted.length})`;
 }
 
+// Segments FERMÉS = complément des plages d'ouverture dans [HOUR_START, HOUR_END]
+function closedSegments(wins: { startTime: string; endTime: string }[]): { s: number; e: number }[] {
+  const lo = HOUR_START * 60, hi = HOUR_END * 60;
+  const open = wins
+    .map((w) => ({ s: Math.max(toMin(w.startTime), lo), e: Math.min(toMin(w.endTime), hi) }))
+    .filter((o) => o.e > o.s)
+    .sort((a, b) => a.s - b.s);
+  const closed: { s: number; e: number }[] = [];
+  let cursor = lo;
+  for (const o of open) {
+    if (o.s > cursor) closed.push({ s: cursor, e: o.s });
+    cursor = Math.max(cursor, o.e);
+  }
+  if (cursor < hi) closed.push({ s: cursor, e: hi });
+  return closed;
+}
+
 type Win = { id: string; weekday: number; startTime: string; endTime: string };
 type Closure = { id: string; date: string };
+type Block = { id: string; date: string; duration: number; reason: string };
 
 export default function AgendaCalendar({ appointments, onSlotClick, onAppointmentClick, onMoveAppointment }: {
   appointments: any[];
@@ -61,6 +79,11 @@ export default function AgendaCalendar({ appointments, onSlotClick, onAppointmen
   const [busyHours, setBusyHours] = useState(false);
   const [custom, setCustom] = useState({ start: '', end: '' });
 
+  // Blocs d'indisponibilité perso + mode blocage
+  const [blocks, setBlocks] = useState<Block[]>([]);
+  const [blockMode, setBlockMode] = useState(false);
+  const [blockDuration, setBlockDuration] = useState(60);
+
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStart);
     d.setDate(d.getDate() + i);
@@ -73,6 +96,8 @@ export default function AgendaCalendar({ appointments, onSlotClick, onAppointmen
     return d.toDateString() === day.toDateString();
   }).sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
+  const blocksForDay = (day: Date) => blocks.filter((b) => new Date(b.date).toDateString() === day.toDateString());
+
   const winsForWeekday = (wd: number) => windows.filter((w) => w.weekday === wd).sort((a, b) => toMin(a.startTime) - toMin(b.startTime));
   const closureFor = (day: Date) => closures.find((c) => localDateStr(new Date(c.date)) === localDateStr(day));
 
@@ -83,9 +108,26 @@ export default function AgendaCalendar({ appointments, onSlotClick, onAppointmen
   const loadAvailability = () => {
     fetch('/api/admin/availability').then(r => r.json()).then(d => { setWindows(d?.windows ?? []); setClosures(d?.closures ?? []); }).catch(() => {});
   };
+  const loadBlocks = () => {
+    const from = localDateStr(days[0]);
+    const to = localDateStr(days[6]);
+    fetch(`/api/admin/agenda-blocks?from=${from}&to=${to}`).then(r => r.json()).then(d => setBlocks(d?.blocks ?? [])).catch(() => {});
+  };
 
   useEffect(() => { loadSettings(); loadAvailability(); }, []);
   useEffect(() => { if (showSettings) loadSettings(); }, [showSettings]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { loadBlocks(); }, [weekStart]);
+
+  const createBlock = async (date: Date, duration: number) => {
+    try {
+      const res = await fetch('/api/admin/agenda-blocks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date: date.toISOString(), duration }) });
+      if (res.ok) { loadBlocks(); toast.success('Créneau bloqué'); } else toast.error('Erreur');
+    } catch { toast.error('Erreur'); }
+  };
+  const delBlock = async (id: string) => {
+    try { const res = await fetch(`/api/admin/agenda-blocks?id=${id}`, { method: 'DELETE' }); if (res.ok) loadBlocks(); } catch {}
+  };
 
   const saveSettings = async (patch: any) => {
     setSavingSettings(true);
@@ -158,9 +200,11 @@ export default function AgendaCalendar({ appointments, onSlotClick, onAppointmen
 
   const handleColumnClick = (day: Date, e: React.MouseEvent<HTMLDivElement>) => {
     if ((e.target as HTMLElement).closest('[data-appointment-block]')) return;
+    if ((e.target as HTMLElement).closest('[data-block-block]')) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const offsetY = e.clientY - rect.top;
     const d = dateFromOffset(day, offsetY);
+    if (blockMode) { createBlock(d, blockDuration); return; }
     onSlotClick(d);
   };
 
@@ -198,10 +242,26 @@ export default function AgendaCalendar({ appointments, onSlotClick, onAppointmen
           <button onClick={() => setWeekStart(d => { const n = new Date(d); n.setDate(n.getDate() + 7); return n; })} className="p-2 rounded-lg bg-white shadow-sm hover:bg-[#F8F4EF]"><ChevronRight size={16} /></button>
           <span className="text-sm text-[#3B312D]/60 ml-2">{days[0].toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} — {days[6].toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
         </div>
-        <button onClick={() => setShowSettings(true)} className="px-4 py-2 bg-white text-[#3B312D] text-sm rounded-lg shadow-sm flex items-center gap-2"><Settings size={14} />Horaires type</button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button onClick={() => setBlockMode((v) => !v)} aria-pressed={blockMode}
+            className={`px-4 py-2 text-sm rounded-lg shadow-sm flex items-center gap-2 ${blockMode ? 'bg-[#3B312D] text-white' : 'bg-white text-[#3B312D]'}`}>
+            <Lock size={14} />{blockMode ? 'Mode blocage actif' : 'Bloquer un créneau'}
+          </button>
+          {blockMode && (
+            <select value={blockDuration} onChange={(e) => setBlockDuration(parseInt(e.target.value))}
+              className="px-2 py-2 text-sm rounded-lg bg-white shadow-sm text-[#3B312D]">
+              {[30, 60, 90, 120, 180, 240].map((m) => <option key={m} value={m}>{m >= 60 ? `${m / 60} h` : `${m} min`}</option>)}
+            </select>
+          )}
+          <button onClick={() => setShowSettings(true)} className="px-4 py-2 bg-white text-[#3B312D] text-sm rounded-lg shadow-sm flex items-center gap-2"><Settings size={14} />Horaires type</button>
+        </div>
       </div>
 
-      <p className="text-xs text-[#3B312D]/40 mb-2">Cliquez sur l'<strong>en-tête d'un jour</strong> pour gérer ses horaires d'ouverture. Cliquez sur un créneau libre pour créer un RDV, sur un RDV pour l'ouvrir, ou glissez-le pour le déplacer.</p>
+      {blockMode ? (
+        <p className="text-xs text-[#3B312D] bg-[#3B312D]/5 border border-[#3B312D]/15 rounded-lg px-3 py-2 mb-2 flex items-center gap-1.5"><Lock size={12} className="text-[#3B312D]" /><strong>Mode blocage :</strong> cliquez dans une journée pour bloquer un créneau de {blockDuration >= 60 ? `${blockDuration / 60} h` : `${blockDuration} min`} (pause, perso…). Il disparaît des réservations en ligne. Cliquez sur la croix d'un bloc gris pour le retirer.</p>
+      ) : (
+        <p className="text-xs text-[#3B312D]/40 mb-2">Cliquez sur l'<strong>en-tête d'un jour</strong> pour gérer ses horaires d'ouverture. Cliquez sur un créneau libre pour créer un RDV, sur un RDV pour l'ouvrir, ou glissez-le pour le déplacer.</p>
+      )}
 
       <div className="bg-white rounded-xl shadow-sm overflow-x-auto">
         <div className="flex min-w-[900px]">
@@ -243,14 +303,20 @@ export default function AgendaCalendar({ appointments, onSlotClick, onAppointmen
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => handleDrop(day, e)}
               >
-                {/* Plages d'ouverture (fond vert) */}
+                {/* Heures FERMÉES : hachuré */}
+                {!dayClosure && closedSegments(dayWins).map((seg, idx) => {
+                  const top = ((seg.s - HOUR_START * 60) / 60) * ROW_HEIGHT;
+                  const height = ((seg.e - seg.s) / 60) * ROW_HEIGHT;
+                  return <div key={`c${idx}`} className="absolute left-0 right-0 pointer-events-none bg-[repeating-linear-gradient(45deg,#f2f0ed,#f2f0ed_6px,#e7e4df_6px,#e7e4df_12px)]" style={{ top, height }} />;
+                })}
+                {/* Plages OUVERTES : léger vert */}
                 {!dayClosure && dayWins.map((w) => {
                   const s = Math.max(toMin(w.startTime), HOUR_START * 60);
                   const e2 = Math.min(toMin(w.endTime), HOUR_END * 60);
                   if (e2 <= s) return null;
                   const top = ((s - HOUR_START * 60) / 60) * ROW_HEIGHT;
                   const height = ((e2 - s) / 60) * ROW_HEIGHT;
-                  return <div key={w.id} className="absolute left-0 right-0 bg-[#AAB7A0]/12 border-y border-[#AAB7A0]/25 pointer-events-none" style={{ top, height }} />;
+                  return <div key={w.id} className="absolute left-0 right-0 bg-[#AAB7A0]/10 border-y border-[#AAB7A0]/25 pointer-events-none" style={{ top, height }} />;
                 })}
                 {/* Overlay fermeture exceptionnelle */}
                 {dayClosure && (
@@ -283,6 +349,19 @@ export default function AgendaCalendar({ appointments, onSlotClick, onAppointmen
                         {isPaid && <Euro size={9} className="text-[#AAB7A0] flex-shrink-0" />}
                       </p>
                       <p className="text-[#3B312D]/70 truncate">{apt?.user?.firstName ?? ''} {apt?.user?.lastName ?? ''}</p>
+                    </div>
+                  );
+                })}
+                {/* Blocs d'indisponibilité perso */}
+                {blocksForDay(day).map((b) => {
+                  const d = new Date(b.date);
+                  const top = (minutesSinceStart(d) / 60) * ROW_HEIGHT;
+                  const height = Math.max(((b.duration ?? 60) / 60) * ROW_HEIGHT, 20);
+                  return (
+                    <div key={b.id} data-block-block style={{ top, height, left: 2, right: 2 }}
+                      className="absolute rounded-md border border-[#3B312D]/30 bg-[repeating-linear-gradient(45deg,#e9e6e1,#e9e6e1_5px,#dcd8d2_5px,#dcd8d2_10px)] px-1.5 py-0.5 text-[10px] text-[#3B312D]/70 overflow-hidden z-20">
+                      <span className="flex items-center gap-1 font-medium"><Lock size={9} />{d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+                      <button onClick={(e) => { e.stopPropagation(); delBlock(b.id); }} className="absolute top-0.5 right-0.5 bg-white/90 text-red-500 rounded-full p-0.5 hover:bg-white" aria-label="Débloquer"><X size={10} /></button>
                     </div>
                   );
                 })}
