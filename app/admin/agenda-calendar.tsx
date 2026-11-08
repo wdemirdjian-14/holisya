@@ -227,6 +227,7 @@ export default function AgendaCalendar({ appointments, onSlotClick, onAppointmen
   // Appui sur la POIGNÉE d'un élément (RDV ou blocage)
   const onGripDown = (e: React.PointerEvent, id: string, kind: 'apt' | 'block', item: any) => {
     e.stopPropagation();
+    e.preventDefault(); // empêche la sélection de texte / loupe iOS au maintien
     try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch {}
     const isMouse = e.pointerType === 'mouse';
     pending.current = { id, kind, item, startX: e.clientX, startY: e.clientY, pid: e.pointerId, armed: isMouse, moved: false };
@@ -297,7 +298,7 @@ export default function AgendaCalendar({ appointments, onSlotClick, onAppointmen
       <p className="text-xs text-[#3B312D]/40 mb-2">Cliquez sur l'<strong>en-tête d'un jour</strong> pour gérer ses horaires. Cliquez sur un créneau libre pour créer un RDV (ou le bloquer), sur un RDV pour l'ouvrir. Pour <strong>déplacer</strong> un RDV ou un blocage : attrapez la <strong>poignée</strong> <GripVertical size={11} className="inline -mt-0.5 text-[#3B312D]/60" /> (sur mobile, maintenez le doigt ~½ s dessus jusqu'à la vibration, puis glissez). L'heure cible s'affiche pendant le déplacement.</p>
 
       <div className="bg-white rounded-xl shadow-sm overflow-x-auto">
-        <div className="flex min-w-[900px]">
+        <div className="flex min-w-[900px] select-none" style={{ userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none' }}>
           {/* Time axis */}
           <div className="w-14 flex-shrink-0 border-r border-[#F8F4EF]">
             <div className="h-16 border-b border-[#F8F4EF]" />
