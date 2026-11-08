@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Plus, Settings, X, Loader2, Euro, Clock, Copy, Ban, Sparkles, Trash2, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -73,7 +73,10 @@ export default function AgendaCalendar({ appointments, onSlotClick, onAppointmen
   const [settings, setSettings] = useState<any>({ openDays: '1,2,3,4,5', openTime: '09:00', closeTime: '18:00', breakMinutes: 15 });
   const [loadingSettings, setLoadingSettings] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
-  const [draggingId, setDraggingId] = useState<string>('');
+  // Glisser-déposer tactile (pointer events) : marche à la souris ET au doigt
+  const pending = useRef<{ apt: any; startX: number; startY: number; pid: number; moved: boolean } | null>(null);
+  const [ghost, setGhost] = useState<{ apt: any; x: number; y: number; label: string } | null>(null);
+  const [overCol, setOverCol] = useState<number | null>(null);
 
   // Horaires d'ouverture récurrents (AvailabilityWindow) + fermetures exceptionnelles
   const [windows, setWindows] = useState<Win[]>([]);
@@ -198,16 +201,43 @@ export default function AgendaCalendar({ appointments, onSlotClick, onAppointmen
     onSlotClick(d);
   };
 
-  const handleDrop = (day: Date, e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const id = e.dataTransfer.getData('text/appointment-id');
-    if (!id) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const offsetY = e.clientY - rect.top;
-    const d = dateFromOffset(day, offsetY);
-    onMoveAppointment(id, d);
-    setDraggingId('');
+  // Repère la colonne (jour) et l'heure sous le pointeur
+  const computeTarget = (clientX: number, clientY: number): { idx: number; date: Date } | null => {
+    const el = document.elementFromPoint(clientX, clientY) as HTMLElement | null;
+    const col = el?.closest('[data-day-col]') as HTMLElement | null;
+    if (!col) return null;
+    const idx = parseInt(col.getAttribute('data-day-col') || '', 10);
+    if (isNaN(idx) || !days[idx]) return null;
+    const rect = col.getBoundingClientRect();
+    return { idx, date: dateFromOffset(days[idx], clientY - rect.top) };
   };
+
+  const onAptPointerDown = (e: React.PointerEvent, apt: any) => {
+    if ((e.target as HTMLElement).closest('[data-del]')) return;
+    try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch {}
+    pending.current = { apt, startX: e.clientX, startY: e.clientY, pid: e.pointerId, moved: false };
+  };
+  const onAptPointerMove = (e: React.PointerEvent) => {
+    const p = pending.current;
+    if (!p || p.pid !== e.pointerId) return;
+    if (!p.moved && Math.hypot(e.clientX - p.startX, e.clientY - p.startY) < 6) return;
+    p.moved = true;
+    const t = computeTarget(e.clientX, e.clientY);
+    setOverCol(t?.idx ?? null);
+    const label = t ? `${t.date.toLocaleDateString('fr-FR', { weekday: 'short' })} ${t.date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}` : '';
+    setGhost({ apt: p.apt, x: e.clientX, y: e.clientY, label });
+  };
+  const onAptPointerUp = (e: React.PointerEvent, apt: any) => {
+    const p = pending.current;
+    pending.current = null;
+    setGhost(null);
+    setOverCol(null);
+    if (!p) return;
+    if (!p.moved) { onAppointmentClick(apt); return; } // simple clic/tap → ouvrir
+    const t = computeTarget(e.clientX, e.clientY);
+    if (t) onMoveAppointment(apt.id, t.date);
+  };
+  const onAptPointerCancel = () => { pending.current = null; setGhost(null); setOverCol(null); };
 
   const openDaysArr = (settings.openDays ?? '').split(',').filter(Boolean).map(Number);
 
@@ -235,7 +265,7 @@ export default function AgendaCalendar({ appointments, onSlotClick, onAppointmen
         <button onClick={() => setShowSettings(true)} className="px-4 py-2 bg-white text-[#3B312D] text-sm rounded-lg shadow-sm flex items-center gap-2"><Settings size={14} />Horaires type</button>
       </div>
 
-      <p className="text-xs text-[#3B312D]/40 mb-2">Cliquez sur l'<strong>en-tête d'un jour</strong> pour gérer ses horaires d'ouverture. Cliquez sur un créneau libre pour créer un RDV (ou le bloquer), sur un RDV ou un blocage pour l'ouvrir, ou glissez un RDV pour le déplacer.</p>
+      <p className="text-xs text-[#3B312D]/40 mb-2">Cliquez sur l'<strong>en-tête d'un jour</strong> pour gérer ses horaires. Cliquez sur un créneau libre pour créer un RDV (ou le bloquer), sur un RDV pour l'ouvrir. <strong>Glissez un RDV</strong> (au doigt ou à la souris) pour le déplacer à un autre jour/heure — l'heure cible s'affiche pendant le déplacement.</p>
 
       <div className="bg-white rounded-xl shadow-sm overflow-x-auto">
         <div className="flex min-w-[900px]">
@@ -271,11 +301,10 @@ export default function AgendaCalendar({ appointments, onSlotClick, onAppointmen
                 <span className="absolute top-1 right-1 p-1 rounded hover:bg-[#C98F79]/20"><Clock size={12} className="text-[#C98F79]" /></span>
               </button>
               <div
-                className="relative cursor-pointer"
+                data-day-col={i}
+                className={`relative cursor-pointer transition-colors ${overCol === i ? 'bg-[#C98F79]/10 ring-2 ring-inset ring-[#C98F79]/40' : ''}`}
                 style={{ height: GRID_HEIGHT }}
                 onClick={(e) => handleColumnClick(day, e)}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => handleDrop(day, e)}
               >
                 {/* Heures FERMÉES : hachuré */}
                 {!dayClosure && closedSegments(dayWins).map((seg, idx) => {
@@ -311,12 +340,12 @@ export default function AgendaCalendar({ appointments, onSlotClick, onAppointmen
                     <div
                       key={apt.id}
                       data-appointment-block
-                      draggable
-                      onDragStart={(e) => { e.dataTransfer.setData('text/appointment-id', apt.id); setDraggingId(apt.id); }}
-                      onDragEnd={() => setDraggingId('')}
-                      onClick={(e) => { e.stopPropagation(); onAppointmentClick(apt); }}
-                      style={{ top, height, left: 2, right: 2 }}
-                      className={`absolute rounded-md border px-1.5 py-1 text-[10px] leading-tight overflow-hidden hover:shadow-md transition-shadow z-10 ${color} ${draggingId === apt.id ? 'opacity-40' : ''} ${apt?.status === 'CANCELLED' ? 'line-through' : ''}`}
+                      onPointerDown={(e) => onAptPointerDown(e, apt)}
+                      onPointerMove={onAptPointerMove}
+                      onPointerUp={(e) => onAptPointerUp(e, apt)}
+                      onPointerCancel={onAptPointerCancel}
+                      style={{ top, height, left: 2, right: 2, touchAction: 'none' }}
+                      className={`absolute rounded-md border px-1.5 py-1 text-[10px] leading-tight overflow-hidden hover:shadow-md transition-shadow z-10 cursor-grab active:cursor-grabbing select-none ${color} ${ghost?.apt?.id === apt.id ? 'opacity-40' : ''} ${apt?.status === 'CANCELLED' ? 'line-through' : ''}`}
                     >
                       <p className="font-semibold text-[#3B312D] truncate flex items-center gap-1">
                         {d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} · {apt?.serviceType ?? ''}
@@ -349,6 +378,16 @@ export default function AgendaCalendar({ appointments, onSlotClick, onAppointmen
           })}
         </div>
       </div>
+
+      {/* Aperçu flottant pendant le glisser-déposer */}
+      {ghost && (
+        <div className="fixed z-[60] pointer-events-none" style={{ left: ghost.x + 14, top: ghost.y + 14 }}>
+          <div className="rounded-md border border-[#C98F79] bg-white shadow-lg px-2.5 py-1.5 text-[11px] text-[#3B312D]">
+            <span className="font-semibold">{ghost.label}</span>
+            <span className="block text-[#3B312D]/60 truncate max-w-[180px]">{ghost.apt?.serviceType ?? 'Soin'} · {ghost.apt?.user?.firstName ?? ''} {ghost.apt?.user?.lastName ?? ''}</span>
+          </div>
+        </div>
+      )}
 
       {/* Éditeur d'horaires d'une journée */}
       {editDay && (

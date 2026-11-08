@@ -122,11 +122,7 @@ export default function AdminDashboard() {
     }).catch(() => setLoading(false));
   }, [status, isAdmin]);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches) {
-      setAppointmentsView('list');
-    }
-  }, []);
+  // L'agenda (calendrier) est la vue par défaut, y compris sur mobile/tablette.
 
   const exportCSV = async (type: string) => {
     try {
@@ -339,6 +335,37 @@ export default function AdminDashboard() {
       const res = await fetch('/api/admin/appointments', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, date: date.toISOString() }) });
       if (res.ok) { toast.success('Rendez-vous déplacé'); refreshData(); } else toast.error('Erreur lors du déplacement');
     } catch { toast.error('Erreur lors du déplacement'); }
+  };
+
+  // RDV passé → « terminé » : déclenche automatiquement l'email de satisfaction / avis Google côté serveur.
+  const markCompleted = async (apt: any) => {
+    if (!apt?.id) return;
+    setSaving(true);
+    try {
+      const res = await fetch('/api/admin/appointments', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: apt.id, status: 'COMPLETED' }) });
+      if (res.ok) { toast.success('Rendez-vous terminé — email de satisfaction envoyé à la cliente'); setModalData((p: any) => ({ ...(p ?? {}), status: 'COMPLETED' })); refreshData(); }
+      else toast.error('Erreur');
+    } catch { toast.error('Erreur'); }
+    setSaving(false);
+  };
+
+  // Dupliquer un RDV (même cliente / soin / durée) sur un autre jour — pré-rempli à +1 semaine.
+  const duplicateAppointment = (apt: any) => {
+    const base = apt?.date ? new Date(apt.date) : (apt?.dateLocal ? new Date(apt.dateLocal) : new Date());
+    const next = new Date(base.getTime() + 7 * 24 * 60 * 60000);
+    setBlockForm(false);
+    setModalData({
+      serviceType: apt?.serviceType ?? '',
+      therapist: apt?.therapist ?? 'Lamyae',
+      duration: apt?.duration ?? 60,
+      userEmail: apt?.user?.email ?? apt?.userEmail ?? '',
+      userFirstName: apt?.user?.firstName ?? apt?.userFirstName ?? '',
+      userLastName: apt?.user?.lastName ?? apt?.userLastName ?? '',
+      status: 'PENDING',
+      dateLocal: toLocalInputValue(next),
+    });
+    setShowModal('add-appointment');
+    toast.info('Copie créée — ajustez le jour/l\'heure puis Enregistrez');
   };
 
   // Ouvre la modale sur un blocage existant (clic sur un bloc gris de l'agenda)
@@ -1248,6 +1275,42 @@ export default function AdminDashboard() {
 
                 {/* --- Formulaire RENDEZ-VOUS --- */}
                 {!blockForm && (<>
+                {/* RDV passé : actions rapides après le passage de la cliente */}
+                {showModal === 'edit-appointment' && modalData?.id && (() => {
+                  const apptDate = modalData?.date ? new Date(modalData.date) : (modalData?.dateLocal ? new Date(modalData.dateLocal) : null);
+                  const isPast = !!apptDate && apptDate.getTime() < Date.now();
+                  if (!isPast || modalData?.status === 'CANCELLED') return null;
+                  const isPaid = (modalData?.payments ?? []).length > 0;
+                  return (
+                    <div className="bg-[#AAB7A0]/10 border border-[#AAB7A0]/30 rounded-xl p-3">
+                      <p className="text-sm font-semibold text-[#3B312D] mb-2">La cliente est passée — que souhaitez-vous faire ?</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {modalData?.status !== 'COMPLETED' ? (
+                          <button onClick={() => markCompleted(modalData)} disabled={saving}
+                            className="col-span-2 flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium rounded-lg bg-[#AAB7A0] text-white hover:brightness-95 disabled:opacity-50">
+                            <Check size={15} />Terminé + email de satisfaction
+                          </button>
+                        ) : (
+                          <div className="col-span-2 flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium rounded-lg bg-[#AAB7A0]/20 text-[#3B312D]/70">
+                            <Check size={14} className="text-[#AAB7A0]" />RDV terminé{!(modalData?.reviewEmailSent === false) ? ' · email de satisfaction envoyé' : ''}
+                          </div>
+                        )}
+                        <button onClick={() => { const el = document.getElementById('enc-amount'); el?.scrollIntoView({ behavior: 'smooth', block: 'center' }); (el as HTMLInputElement | null)?.focus(); }}
+                          className="flex items-center justify-center gap-1.5 px-3 py-2.5 text-sm font-medium rounded-lg bg-white border border-[#C98F79]/40 text-[#C98F79] hover:bg-[#C98F79]/5">
+                          <Euro size={15} />{isPaid ? 'Encaissement' : 'Encaisser'}
+                        </button>
+                        <button onClick={() => { const base = modalData?.date ? new Date(modalData.date) : new Date(); setModalData({ ...(modalData ?? {}), dateLocal: toLocalInputValue(new Date(base.getTime() + 7 * 24 * 60 * 60000)) }); toast.info('Nouvelle date proposée (semaine prochaine) — ajustez puis Enregistrez'); }}
+                          className="flex items-center justify-center gap-1.5 px-3 py-2.5 text-sm font-medium rounded-lg bg-white border border-[#3B312D]/20 text-[#3B312D] hover:bg-[#3B312D]/5">
+                          <CalendarPlus size={15} />Décaler
+                        </button>
+                        <button onClick={() => duplicateAppointment(modalData)}
+                          className="col-span-2 flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg bg-white border border-[#3B312D]/20 text-[#3B312D] hover:bg-[#3B312D]/5">
+                          <Plus size={15} />Reposer un rendez-vous à cette cliente
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
                 {modalData?.clientRequest && (
                   <div className="bg-[#C98F79]/10 border border-[#C98F79]/30 rounded-lg px-4 py-3">
                     <p className="text-sm font-medium text-[#C98F79]">Demande de la cliente : {modalData.clientRequest === 'cancel' ? 'annulation' : 'report'}</p>
@@ -1284,6 +1347,12 @@ export default function AdminDashboard() {
                   className="w-full py-3 bg-[#C98F79] text-white font-medium rounded-lg disabled:opacity-50">{saving ? 'Enregistrement...' : 'Enregistrer'}</button>
 
                 {showModal === 'edit-appointment' && modalData?.id && (
+                  <button onClick={() => duplicateAppointment(modalData)} className="w-full py-2.5 bg-white border border-[#3B312D]/20 text-[#3B312D] text-sm font-medium rounded-lg hover:bg-[#3B312D]/5 flex items-center justify-center gap-2">
+                    <Plus size={14} />Dupliquer ce RDV à un autre jour
+                  </button>
+                )}
+
+                {showModal === 'edit-appointment' && modalData?.id && (
                   <div className="pt-4 border-t border-[#F8F4EF]">
                     <h4 className="text-sm font-semibold text-[#3B312D] mb-3">Encaissements</h4>
                     <div className="space-y-2 mb-4">
@@ -1298,7 +1367,7 @@ export default function AdminDashboard() {
                     <div className="grid grid-cols-2 gap-2">
                       <select value={newPayment?.method ?? 'CASH'} onChange={(e: any) => setNewPayment({...(newPayment ?? {}), method: e.target?.value ?? 'CASH', giftCardCode: ''})} className="px-3 py-2 text-sm border border-[#F8F4EF] rounded-lg bg-[#F8F4EF]/50 text-[#3B312D]">
                         <option value="CASH">Espèces</option><option value="CARD">Carte bleue</option><option value="GIFT_CARD">Carte cadeau</option></select>
-                      <input type="number" step="0.01" placeholder="Montant" value={newPayment?.amount ?? ''} onChange={(e: any) => setNewPayment({...(newPayment ?? {}), amount: e.target?.value ?? ''})} className="px-3 py-2 text-sm border border-[#F8F4EF] rounded-lg bg-[#F8F4EF]/50 text-[#3B312D]" />
+                      <input id="enc-amount" type="number" step="0.01" placeholder="Montant" value={newPayment?.amount ?? ''} onChange={(e: any) => setNewPayment({...(newPayment ?? {}), amount: e.target?.value ?? ''})} className="px-3 py-2 text-sm border border-[#F8F4EF] rounded-lg bg-[#F8F4EF]/50 text-[#3B312D]" />
                     </div>
                     {newPayment?.method === 'GIFT_CARD' && (
                       <div className="mt-2">
