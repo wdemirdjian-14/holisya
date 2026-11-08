@@ -26,10 +26,6 @@ function toMin(hhmm: string): number {
   const [h, m] = (hhmm || '0:0').split(':').map((x) => parseInt(x) || 0);
   return h * 60 + m;
 }
-function minToHHMM(min: number): string {
-  const m = Math.max(0, Math.min(24 * 60, min));
-  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
-}
 function localDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
@@ -62,11 +58,14 @@ type Win = { id: string; weekday: number; startTime: string; endTime: string };
 type Closure = { id: string; date: string };
 type Block = { id: string; date: string; duration: number; reason: string };
 
-export default function AgendaCalendar({ appointments, onSlotClick, onAppointmentClick, onMoveAppointment }: {
+export default function AgendaCalendar({ appointments, onSlotClick, onAppointmentClick, onMoveAppointment, onBlockClick, onBlockDelete, blockRefresh }: {
   appointments: any[];
   onSlotClick: (date: Date) => void;
   onAppointmentClick: (apt: any) => void;
   onMoveAppointment: (id: string, date: Date) => void;
+  onBlockClick: (block: Block) => void;
+  onBlockDelete: (id: string) => void | Promise<void>;
+  blockRefresh?: number;
 }) {
   const today = new Date();
   const [weekStart, setWeekStart] = useState<Date>(startOfWeek(new Date()));
@@ -83,11 +82,8 @@ export default function AgendaCalendar({ appointments, onSlotClick, onAppointmen
   const [busyHours, setBusyHours] = useState(false);
   const [custom, setCustom] = useState({ start: '', end: '' });
 
-  // Blocs d'indisponibilité perso + mode blocage
+  // Blocs d'indisponibilité perso (création/édition via la modale unifiée)
   const [blocks, setBlocks] = useState<Block[]>([]);
-  const [blockMode, setBlockMode] = useState(false);
-  const [blockDuration, setBlockDuration] = useState(60);
-  const [editBlock, setEditBlock] = useState<{ id: string; day: Date; start: string; end: string } | null>(null);
 
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStart);
@@ -122,33 +118,7 @@ export default function AgendaCalendar({ appointments, onSlotClick, onAppointmen
   useEffect(() => { loadSettings(); loadAvailability(); }, []);
   useEffect(() => { if (showSettings) loadSettings(); }, [showSettings]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { loadBlocks(); }, [weekStart]);
-
-  const createBlock = async (date: Date, duration: number) => {
-    try {
-      const res = await fetch('/api/admin/agenda-blocks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date: date.toISOString(), duration }) });
-      if (res.ok) { loadBlocks(); toast.success('Créneau bloqué'); } else toast.error('Erreur');
-    } catch { toast.error('Erreur'); }
-  };
-  const delBlock = async (id: string) => {
-    try { const res = await fetch(`/api/admin/agenda-blocks?id=${id}`, { method: 'DELETE' }); if (res.ok) { loadBlocks(); setEditBlock(null); } } catch {}
-  };
-  const openBlockEditor = (b: Block) => {
-    const d = new Date(b.date);
-    const day = new Date(d); day.setHours(0, 0, 0, 0);
-    const startMin = d.getHours() * 60 + d.getMinutes();
-    setEditBlock({ id: b.id, day, start: minToHHMM(startMin), end: minToHHMM(startMin + (b.duration || 60)) });
-  };
-  const saveBlockEdit = async () => {
-    if (!editBlock) return;
-    const sMin = toMin(editBlock.start), eMin = toMin(editBlock.end);
-    if (eMin <= sMin) { toast.error('L\'heure de fin doit suivre le début'); return; }
-    const date = new Date(editBlock.day); date.setMinutes(sMin);
-    try {
-      const res = await fetch('/api/admin/agenda-blocks', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: editBlock.id, date: date.toISOString(), duration: eMin - sMin }) });
-      if (res.ok) { loadBlocks(); setEditBlock(null); toast.success('Bloc mis à jour'); } else toast.error('Erreur');
-    } catch { toast.error('Erreur'); }
-  };
+  useEffect(() => { loadBlocks(); }, [weekStart, blockRefresh]);
 
   const saveSettings = async (patch: any) => {
     setSavingSettings(true);
@@ -225,7 +195,6 @@ export default function AgendaCalendar({ appointments, onSlotClick, onAppointmen
     const rect = e.currentTarget.getBoundingClientRect();
     const offsetY = e.clientY - rect.top;
     const d = dateFromOffset(day, offsetY);
-    if (blockMode) { createBlock(d, blockDuration); return; }
     onSlotClick(d);
   };
 
@@ -263,26 +232,10 @@ export default function AgendaCalendar({ appointments, onSlotClick, onAppointmen
           <button onClick={() => setWeekStart(d => { const n = new Date(d); n.setDate(n.getDate() + 7); return n; })} className="p-2 rounded-lg bg-white shadow-sm hover:bg-[#F8F4EF]"><ChevronRight size={16} /></button>
           <span className="text-sm text-[#3B312D]/60 ml-2">{days[0].toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} — {days[6].toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <button onClick={() => setBlockMode((v) => !v)} aria-pressed={blockMode}
-            className={`px-4 py-2 text-sm rounded-lg shadow-sm flex items-center gap-2 ${blockMode ? 'bg-[#3B312D] text-white' : 'bg-white text-[#3B312D]'}`}>
-            <Lock size={14} />{blockMode ? 'Mode blocage actif' : 'Bloquer un créneau'}
-          </button>
-          {blockMode && (
-            <select value={blockDuration} onChange={(e) => setBlockDuration(parseInt(e.target.value))}
-              className="px-2 py-2 text-sm rounded-lg bg-white shadow-sm text-[#3B312D]">
-              {[30, 60, 90, 120, 180, 240].map((m) => <option key={m} value={m}>{m >= 60 ? `${m / 60} h` : `${m} min`}</option>)}
-            </select>
-          )}
-          <button onClick={() => setShowSettings(true)} className="px-4 py-2 bg-white text-[#3B312D] text-sm rounded-lg shadow-sm flex items-center gap-2"><Settings size={14} />Horaires type</button>
-        </div>
+        <button onClick={() => setShowSettings(true)} className="px-4 py-2 bg-white text-[#3B312D] text-sm rounded-lg shadow-sm flex items-center gap-2"><Settings size={14} />Horaires type</button>
       </div>
 
-      {blockMode ? (
-        <p className="text-xs text-[#3B312D] bg-[#3B312D]/5 border border-[#3B312D]/15 rounded-lg px-3 py-2 mb-2 flex items-center gap-1.5"><Lock size={12} className="text-[#3B312D]" /><strong>Mode blocage :</strong> cliquez dans une journée pour bloquer un créneau de {blockDuration >= 60 ? `${blockDuration / 60} h` : `${blockDuration} min`} (pause, perso…). Il disparaît des réservations en ligne. Cliquez sur la croix d'un bloc gris pour le retirer.</p>
-      ) : (
-        <p className="text-xs text-[#3B312D]/40 mb-2">Cliquez sur l'<strong>en-tête d'un jour</strong> pour gérer ses horaires d'ouverture. Cliquez sur un créneau libre pour créer un RDV, sur un RDV pour l'ouvrir, ou glissez-le pour le déplacer.</p>
-      )}
+      <p className="text-xs text-[#3B312D]/40 mb-2">Cliquez sur l'<strong>en-tête d'un jour</strong> pour gérer ses horaires d'ouverture. Cliquez sur un créneau libre pour créer un RDV (ou le bloquer), sur un RDV ou un blocage pour l'ouvrir, ou glissez un RDV pour le déplacer.</p>
 
       <div className="bg-white rounded-xl shadow-sm overflow-x-auto">
         <div className="flex min-w-[900px]">
@@ -378,13 +331,15 @@ export default function AgendaCalendar({ appointments, onSlotClick, onAppointmen
                   const d = new Date(b.date);
                   const top = (minutesSinceStart(d) / 60) * ROW_HEIGHT;
                   const height = Math.max(((b.duration ?? 60) / 60) * ROW_HEIGHT, 20);
+                  const reason = (b.reason || '').trim();
                   return (
                     <div key={b.id} data-block-block style={{ top, height, left: 2, right: 2 }}
-                      onClick={(e) => { e.stopPropagation(); openBlockEditor(b); }}
+                      onClick={(e) => { e.stopPropagation(); onBlockClick(b); }}
                       title="Modifier ce blocage (début, fin, durée)"
                       className="absolute rounded-md border border-[#3B312D]/30 bg-[repeating-linear-gradient(45deg,#e9e6e1,#e9e6e1_5px,#dcd8d2_5px,#dcd8d2_10px)] px-1.5 py-0.5 text-[10px] text-[#3B312D]/70 overflow-hidden z-20 cursor-pointer hover:border-[#3B312D]/60">
                       <span className="flex items-center gap-1 font-medium"><Lock size={9} />{d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
-                      <button onClick={(e) => { e.stopPropagation(); delBlock(b.id); }} className="absolute top-0.5 right-0.5 bg-white/90 text-red-500 rounded-full p-0.5 hover:bg-white" aria-label="Débloquer"><X size={10} /></button>
+                      {reason && <span className="block truncate text-[#3B312D]/55">{reason}</span>}
+                      <button onClick={(e) => { e.stopPropagation(); onBlockDelete(b.id); }} className="absolute top-0.5 right-0.5 bg-white/90 text-red-500 rounded-full p-0.5 hover:bg-white" aria-label="Débloquer"><X size={10} /></button>
                     </div>
                   );
                 })}
@@ -394,42 +349,6 @@ export default function AgendaCalendar({ appointments, onSlotClick, onAppointmen
           })}
         </div>
       </div>
-
-      {/* Propriétés d'un blocage (début / fin / durée) */}
-      {editBlock && (() => {
-        const dur = toMin(editBlock.end) - toMin(editBlock.start);
-        return (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setEditBlock(null)}>
-            <div className="bg-white rounded-2xl p-6 w-full max-w-sm" onClick={(e: any) => e.stopPropagation()}>
-              <div className="flex items-start justify-between mb-1">
-                <div>
-                  <h3 className="font-playfair text-lg font-semibold text-[#3B312D] flex items-center gap-2"><Lock size={17} className="text-[#3B312D]" />Créneau bloqué</h3>
-                  <p className="text-xs text-[#3B312D]/50 mt-0.5 capitalize">{editBlock.day.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-                </div>
-                <button onClick={() => setEditBlock(null)} className="p-1.5 rounded hover:bg-[#F8F4EF] flex-none"><X size={18} /></button>
-              </div>
-              <div className="flex items-end gap-2 mt-4">
-                <div><label className="text-[11px] text-[#3B312D]/50">Début</label><input type="time" value={editBlock.start} onChange={(e) => setEditBlock({ ...editBlock, start: e.target.value })} className="block mt-1 px-2 py-1.5 text-sm border border-[#F8F4EF] rounded-lg text-[#3B312D]" /></div>
-                <div><label className="text-[11px] text-[#3B312D]/50">Fin</label><input type="time" value={editBlock.end} onChange={(e) => setEditBlock({ ...editBlock, end: e.target.value })} className="block mt-1 px-2 py-1.5 text-sm border border-[#F8F4EF] rounded-lg text-[#3B312D]" /></div>
-                <span className={`text-xs pb-2 ${dur > 0 ? 'text-[#3B312D]/50' : 'text-red-500'}`}>{dur > 0 ? `${dur >= 60 ? `${Math.floor(dur / 60)} h${dur % 60 ? ` ${dur % 60}` : ''}` : `${dur} min`}` : 'durée nulle'}</span>
-              </div>
-              <div className="mt-3">
-                <label className="text-[11px] text-[#3B312D]/50">Durées rapides</label>
-                <div className="flex flex-wrap gap-1.5 mt-1">
-                  {[30, 60, 90, 120, 180, 240].map((m) => (
-                    <button key={m} onClick={() => setEditBlock({ ...editBlock, end: minToHHMM(toMin(editBlock.start) + m) })}
-                      className="text-xs px-2.5 py-1 rounded-full border border-[#3B312D]/20 text-[#3B312D]/70 hover:bg-[#3B312D]/5">{m >= 60 ? `${m / 60} h` : `${m} min`}</button>
-                  ))}
-                </div>
-              </div>
-              <div className="flex items-center gap-2 mt-5">
-                <button onClick={saveBlockEdit} disabled={dur <= 0} className="flex-1 px-4 py-2.5 bg-[#3B312D] text-white text-sm rounded-lg font-medium disabled:opacity-50">Enregistrer</button>
-                <button onClick={() => delBlock(editBlock.id)} className="px-4 py-2.5 bg-red-50 text-red-600 text-sm rounded-lg font-medium hover:bg-red-100 flex items-center gap-1.5"><Trash2 size={14} />Débloquer</button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
 
       {/* Éditeur d'horaires d'une journée */}
       {editDay && (

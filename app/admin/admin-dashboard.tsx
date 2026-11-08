@@ -3,7 +3,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { LayoutDashboard, Users, Calendar, Gift, Crown, Tag, FileText, MessageSquare, BarChart3, Loader2, Euro, TrendingUp, Download, Bell, Search, Plus, Edit, Trash2, X, Check, Eye, Send, Minus, ShoppingBag, Image as ImageIcon, Mail, Type, Video, CalendarPlus, Settings } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, Gift, Crown, Tag, FileText, MessageSquare, BarChart3, Loader2, Euro, TrendingUp, Download, Bell, Search, Plus, Edit, Trash2, X, Check, Eye, Send, Minus, ShoppingBag, Image as ImageIcon, Mail, Type, Video, CalendarPlus, Settings, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import dynamic from 'next/dynamic';
 import ClientPicker from './client-picker';
@@ -68,6 +68,8 @@ export default function AdminDashboard() {
   const [creditAmount, setCreditAmount] = useState(1);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [appointmentsView, setAppointmentsView] = useState<'calendar' | 'list'>('calendar');
+  const [blockForm, setBlockForm] = useState(false); // la modale RDV est en mode « blocage »
+  const [blockRefresh, setBlockRefresh] = useState(0); // force le rechargement des blocs dans l'agenda
   const [giftCardSearch, setGiftCardSearch] = useState('');
   const [contactReplies, setContactReplies] = useState<Record<string, string>>({});
   const [importingContacts, setImportingContacts] = useState(false);
@@ -339,6 +341,43 @@ export default function AdminDashboard() {
     } catch { toast.error('Erreur lors du déplacement'); }
   };
 
+  // Ouvre la modale sur un blocage existant (clic sur un bloc gris de l'agenda)
+  const openBlockModal = (b: any) => {
+    const start = new Date(b.date);
+    const end = new Date(start.getTime() + (b.duration || 60) * 60000);
+    setModalData({ blockId: b.id, blockReason: b.reason ?? '', dateLocal: toLocalInputValue(start), blockEndLocal: toLocalInputValue(end) });
+    setBlockForm(true);
+    setShowModal('add-appointment');
+  };
+
+  // Enregistre un créneau bloqué (création ou modification) depuis la modale
+  const saveBlock = async () => {
+    const startStr = modalData?.dateLocal;
+    const endStr = modalData?.blockEndLocal;
+    if (!startStr || !endStr) { toast.error('Renseignez le début et la fin'); return; }
+    const start = new Date(startStr), end = new Date(endStr);
+    const duration = Math.round((end.getTime() - start.getTime()) / 60000);
+    if (isNaN(duration) || duration < 15) { toast.error('La fin doit suivre le début (15 min minimum)'); return; }
+    setSaving(true);
+    try {
+      const editing = !!modalData?.blockId;
+      const res = await fetch('/api/admin/agenda-blocks', {
+        method: editing ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: modalData?.blockId, date: start.toISOString(), duration, reason: modalData?.blockReason ?? '' }),
+      });
+      if (res.ok) { toast.success(editing ? 'Blocage mis à jour' : 'Créneau bloqué'); setShowModal(null); setBlockForm(false); setBlockRefresh((x) => x + 1); }
+      else { const err = await res.json().catch(() => ({})); toast.error(err?.error ?? 'Erreur'); }
+    } catch { toast.error('Erreur'); }
+    setSaving(false);
+  };
+  const deleteBlock = async (id: string) => {
+    try {
+      const res = await fetch(`/api/admin/agenda-blocks?id=${id}`, { method: 'DELETE' });
+      if (res.ok) { toast.success('Créneau débloqué'); setShowModal(null); setBlockForm(false); setBlockRefresh((x) => x + 1); } else toast.error('Erreur');
+    } catch { toast.error('Erreur'); }
+  };
+
   const deductGiftCard = async (id: string) => {
     const value = parseFloat(deductAmount);
     if (!value || value <= 0) { toast.error('Montant invalide'); return; }
@@ -430,7 +469,7 @@ export default function AdminDashboard() {
                       const d = new Date(apt.date);
                       const isPaid = (apt?.payments ?? []).length > 0;
                       return (
-                        <button key={apt.id} onClick={() => { setModalData(apt); setShowModal('edit-appointment'); }}
+                        <button key={apt.id} onClick={() => { setBlockForm(false); setModalData(apt); setShowModal('edit-appointment'); }}
                           className="w-full text-left px-1 py-3 hover:bg-[#F8F4EF]/50 rounded-lg transition-colors flex items-center gap-3">
                           <div className="flex-shrink-0 w-14 text-center">
                             <p className="text-[10px] uppercase text-[#3B312D]/40 leading-tight">{d.toLocaleDateString('fr-FR', { weekday: 'short' })}</p>
@@ -652,16 +691,19 @@ export default function AdminDashboard() {
                 <button onClick={() => setAppointmentsView('calendar')} className={`px-3 py-1.5 text-xs font-medium rounded-md ${appointmentsView === 'calendar' ? 'bg-[#C98F79] text-white' : 'text-[#3B312D]/60'}`}>Calendrier</button>
                 <button onClick={() => setAppointmentsView('list')} className={`px-3 py-1.5 text-xs font-medium rounded-md ${appointmentsView === 'list' ? 'bg-[#C98F79] text-white' : 'text-[#3B312D]/60'}`}>Liste</button>
               </div>
-              <button onClick={() => { setModalData({ serviceType: '', therapist: 'Lamyae', date: '', userId: '', status: 'PENDING', duration: 60 }); setShowModal('add-appointment'); }}
+              <button onClick={() => { setBlockForm(false); setModalData({ serviceType: '', therapist: 'Lamyae', date: '', userId: '', status: 'PENDING', duration: 60 }); setShowModal('add-appointment'); }}
                 className="px-4 py-2 bg-[#C98F79] text-white text-sm rounded-lg flex items-center gap-2"><Plus size={14} />Nouveau</button>
             </div>
           </div>
           {appointmentsView === 'calendar' ? (
             <AgendaCalendar
               appointments={appointments ?? []}
-              onSlotClick={(date: Date) => { setModalData({ serviceType: '', therapist: 'Lamyae', dateLocal: toLocalInputValue(date), userId: '', status: 'PENDING', duration: 60 }); setShowModal('add-appointment'); }}
-              onAppointmentClick={(apt: any) => { setModalData(apt); setShowModal('edit-appointment'); }}
+              onSlotClick={(date: Date) => { setBlockForm(false); setModalData({ serviceType: '', therapist: 'Lamyae', dateLocal: toLocalInputValue(date), blockEndLocal: toLocalInputValue(new Date(date.getTime() + 60 * 60000)), userId: '', status: 'PENDING', duration: 60 }); setShowModal('add-appointment'); }}
+              onAppointmentClick={(apt: any) => { setBlockForm(false); setModalData(apt); setShowModal('edit-appointment'); }}
               onMoveAppointment={moveAppointment}
+              onBlockClick={openBlockModal}
+              onBlockDelete={deleteBlock}
+              blockRefresh={blockRefresh}
             />
           ) : (
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
@@ -676,7 +718,7 @@ export default function AdminDashboard() {
                 </tr></thead>
                 <tbody>
                   {(appointments ?? []).map((apt: any) => (
-                    <tr key={apt?.id ?? ''} className="border-t border-[#F8F4EF] hover:bg-[#F8F4EF]/50 cursor-pointer" onClick={() => { setModalData(apt); setShowModal('edit-appointment'); }} title="Voir le détail et saisir l'encaissement">
+                    <tr key={apt?.id ?? ''} className="border-t border-[#F8F4EF] hover:bg-[#F8F4EF]/50 cursor-pointer" onClick={() => { setBlockForm(false); setModalData(apt); setShowModal('edit-appointment'); }} title="Voir le détail et saisir l'encaissement">
                       <td className="px-4 py-3 text-[#3B312D]">{apt?.user?.firstName ?? ''} {apt?.user?.lastName ?? ''}</td>
                       <td className="px-4 py-3 text-[#3B312D]/60">{apt?.serviceType ?? ''}</td>
                       <td className="px-4 py-3 text-[#3B312D]/60 text-xs">{apt?.date ? new Date(apt.date).toLocaleString('fr-FR') : ''}</td>
@@ -686,7 +728,7 @@ export default function AdminDashboard() {
                         {apt?.clientRequest && <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full bg-[#C98F79] text-white font-medium">Demande {apt.clientRequest === 'cancel' ? 'annulation' : 'report'}</span>}
                       </td>
                       <td className="px-4 py-3 flex gap-1" onClick={(e) => e.stopPropagation()}>
-                        <button onClick={() => { setModalData(apt); setShowModal('edit-appointment'); }} className="p-1.5 rounded hover:bg-[#C98F79]/10" title="Détail / encaissement"><Edit size={14} className="text-[#C98F79]" /></button>
+                        <button onClick={() => { setBlockForm(false); setModalData(apt); setShowModal('edit-appointment'); }} className="p-1.5 rounded hover:bg-[#C98F79]/10" title="Détail / encaissement"><Edit size={14} className="text-[#C98F79]" /></button>
                         <button onClick={() => handleDelete('appointments', apt?.id ?? '')} className="p-1.5 rounded hover:bg-red-50"><Trash2 size={14} className="text-red-500" /></button>
                       </td>
                     </tr>
@@ -983,7 +1025,7 @@ export default function AdminDashboard() {
           <div className="bg-white rounded-2xl p-6 w-full max-w-lg max-h-[85vh] overflow-y-auto" onClick={(e: any) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-playfair text-lg font-semibold text-[#3B312D]">
-                {showModal === 'add-promo' ? 'Nouveau code promo' : showModal === 'edit-promo' ? 'Modifier code promo' : showModal === 'add-appointment' ? 'Nouveau rendez-vous' : showModal === 'edit-appointment' ? 'Modifier rendez-vous' : showModal === 'add-blog' ? 'Nouvel article' : showModal === 'edit-blog' ? 'Modifier article' : showModal === 'edit-client' ? 'Modifier client' : showModal === 'notify-client' ? 'Envoyer notification' : showModal === 'manage-credits' ? 'Gérer les crédits' : showModal === 'giftcard-detail' ? 'Détails carte cadeau' : showModal === 'add-giftcard' ? 'Nouvelle carte cadeau' : showModal === 'add-service' ? 'Nouveau service' : showModal === 'edit-service' ? 'Modifier le service' : showModal === 'add-testimonial' ? 'Nouveau témoignage' : ''}
+                {showModal === 'add-promo' ? 'Nouveau code promo' : showModal === 'edit-promo' ? 'Modifier code promo' : (showModal === 'add-appointment' || showModal === 'edit-appointment') ? (blockForm ? (modalData?.blockId ? 'Modifier le blocage' : 'Bloquer un créneau') : (showModal === 'add-appointment' ? 'Nouveau rendez-vous' : 'Modifier rendez-vous')) : showModal === 'add-blog' ? 'Nouvel article' : showModal === 'edit-blog' ? 'Modifier article' : showModal === 'edit-client' ? 'Modifier client' : showModal === 'notify-client' ? 'Envoyer notification' : showModal === 'manage-credits' ? 'Gérer les crédits' : showModal === 'giftcard-detail' ? 'Détails carte cadeau' : showModal === 'add-giftcard' ? 'Nouvelle carte cadeau' : showModal === 'add-service' ? 'Nouveau service' : showModal === 'edit-service' ? 'Modifier le service' : showModal === 'add-testimonial' ? 'Nouveau témoignage' : ''}
               </h3>
               <button onClick={() => setShowModal(null)} className="p-1.5 rounded hover:bg-[#F8F4EF]"><X size={18} /></button>
             </div>
@@ -1166,6 +1208,46 @@ export default function AdminDashboard() {
             {/* Appointment Modal */}
             {(showModal === 'add-appointment' || showModal === 'edit-appointment') && (
               <div className="space-y-4">
+                {showModal === 'add-appointment' && !modalData?.blockId && (
+                  <button onClick={() => setBlockForm((v) => !v)} aria-pressed={blockForm}
+                    className={`w-full py-2.5 rounded-lg font-medium text-sm flex items-center justify-center gap-2 border transition-colors ${blockForm ? 'bg-[#3B312D] text-white border-[#3B312D]' : 'bg-white text-[#3B312D] border-[#3B312D]/20 hover:bg-[#3B312D]/5'}`}>
+                    <Lock size={14} />{blockForm ? 'Blocage de créneau — revenir au rendez-vous' : 'Bloquer le créneau'}
+                  </button>
+                )}
+
+                {/* --- Formulaire BLOCAGE --- */}
+                {blockForm && (() => {
+                  const s = modalData?.dateLocal ? new Date(modalData.dateLocal) : null;
+                  const e = modalData?.blockEndLocal ? new Date(modalData.blockEndLocal) : null;
+                  const dur = s && e ? Math.round((e.getTime() - s.getTime()) / 60000) : 0;
+                  const setEndFromDuration = (m: number) => { if (s) setModalData({ ...(modalData ?? {}), blockEndLocal: toLocalInputValue(new Date(s.getTime() + m * 60000)) }); };
+                  return (
+                    <div className="space-y-4">
+                      <div><label className="text-sm font-medium text-[#3B312D]/70">Description (facultatif)</label>
+                        <input value={modalData?.blockReason ?? ''} onChange={(ev: any) => setModalData({ ...(modalData ?? {}), blockReason: ev.target?.value ?? '' })} placeholder="Ex : pause déjeuner, rendez-vous perso…" className="w-full mt-1 px-4 py-3 text-sm border border-[#F8F4EF] rounded-lg bg-[#F8F4EF]/50 text-[#3B312D]" /></div>
+                      <div><label className="text-sm font-medium text-[#3B312D]/70">Début</label>
+                        <input type="datetime-local" value={modalData?.dateLocal ?? ''} onChange={(ev: any) => setModalData({ ...(modalData ?? {}), dateLocal: ev.target?.value ?? '' })} className="w-full mt-1 px-4 py-3 text-sm border border-[#F8F4EF] rounded-lg bg-[#F8F4EF]/50 text-[#3B312D]" /></div>
+                      <div><label className="text-sm font-medium text-[#3B312D]/70">Fin</label>
+                        <input type="datetime-local" value={modalData?.blockEndLocal ?? ''} onChange={(ev: any) => setModalData({ ...(modalData ?? {}), blockEndLocal: ev.target?.value ?? '' })} className="w-full mt-1 px-4 py-3 text-sm border border-[#F8F4EF] rounded-lg bg-[#F8F4EF]/50 text-[#3B312D]" />
+                        <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                          <span className="text-[11px] text-[#3B312D]/50">Durée :</span>
+                          {[30, 60, 90, 120, 180, 240].map((m) => (
+                            <button key={m} type="button" onClick={() => setEndFromDuration(m)} className="text-xs px-2.5 py-1 rounded-full border border-[#3B312D]/20 text-[#3B312D]/70 hover:bg-[#3B312D]/5">{m >= 60 ? `${m / 60} h` : `${m} min`}</button>
+                          ))}
+                          <span className={`text-xs ml-1 ${dur > 0 ? 'text-[#3B312D]/50' : 'text-red-500'}`}>{dur > 0 ? `= ${dur >= 60 ? `${Math.floor(dur / 60)} h${dur % 60 ? ` ${dur % 60}` : ''}` : `${dur} min`}` : ''}</span>
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-[#3B312D]/45">Ce créneau sera indisponible à la réservation en ligne.</p>
+                      <button onClick={saveBlock} disabled={saving} className="w-full py-3 bg-[#3B312D] text-white font-medium rounded-lg disabled:opacity-50">{saving ? 'Enregistrement...' : (modalData?.blockId ? 'Enregistrer le blocage' : 'Bloquer le créneau')}</button>
+                      {modalData?.blockId && (
+                        <button onClick={() => deleteBlock(modalData.blockId)} className="w-full py-2.5 bg-red-50 text-red-600 font-medium rounded-lg hover:bg-red-100 flex items-center justify-center gap-1.5"><Trash2 size={14} />Débloquer ce créneau</button>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* --- Formulaire RENDEZ-VOUS --- */}
+                {!blockForm && (<>
                 {modalData?.clientRequest && (
                   <div className="bg-[#C98F79]/10 border border-[#C98F79]/30 rounded-lg px-4 py-3">
                     <p className="text-sm font-medium text-[#C98F79]">Demande de la cliente : {modalData.clientRequest === 'cancel' ? 'annulation' : 'report'}</p>
@@ -1231,6 +1313,7 @@ export default function AdminDashboard() {
                       className="w-full mt-2 px-3 py-2 text-sm bg-[#AAB7A0] text-white rounded-lg disabled:opacity-40">Ajouter l'encaissement</button>
                   </div>
                 )}
+                </>)}
               </div>
             )}
 
