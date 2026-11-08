@@ -337,6 +337,14 @@ export default function AdminDashboard() {
     } catch { toast.error('Erreur lors du déplacement'); }
   };
 
+  // Déplace un créneau bloqué (glisser-déposer dans l'agenda)
+  const moveBlock = async (id: string, date: Date) => {
+    try {
+      const res = await fetch('/api/admin/agenda-blocks', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, date: date.toISOString() }) });
+      if (res.ok) { toast.success('Blocage déplacé'); setBlockRefresh((x) => x + 1); } else toast.error('Erreur lors du déplacement');
+    } catch { toast.error('Erreur lors du déplacement'); }
+  };
+
   // RDV passé → « terminé » : déclenche automatiquement l'email de satisfaction / avis Google côté serveur.
   const markCompleted = async (apt: any) => {
     if (!apt?.id) return;
@@ -728,6 +736,7 @@ export default function AdminDashboard() {
               onSlotClick={(date: Date) => { setBlockForm(false); setModalData({ serviceType: '', therapist: 'Lamyae', dateLocal: toLocalInputValue(date), blockEndLocal: toLocalInputValue(new Date(date.getTime() + 60 * 60000)), userId: '', status: 'PENDING', duration: 60 }); setShowModal('add-appointment'); }}
               onAppointmentClick={(apt: any) => { setBlockForm(false); setModalData(apt); setShowModal('edit-appointment'); }}
               onMoveAppointment={moveAppointment}
+              onMoveBlock={moveBlock}
               onBlockClick={openBlockModal}
               onBlockDelete={deleteBlock}
               blockRefresh={blockRefresh}

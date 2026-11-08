@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Settings, X, Loader2, Euro, Clock, Copy, Ban, Sparkles, Trash2, Lock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Settings, X, Loader2, Euro, Clock, Copy, Ban, Sparkles, Trash2, Lock, GripVertical } from 'lucide-react';
 import { toast } from 'sonner';
 
 function startOfWeek(date: Date): Date {
@@ -58,11 +58,12 @@ type Win = { id: string; weekday: number; startTime: string; endTime: string };
 type Closure = { id: string; date: string };
 type Block = { id: string; date: string; duration: number; reason: string };
 
-export default function AgendaCalendar({ appointments, onSlotClick, onAppointmentClick, onMoveAppointment, onBlockClick, onBlockDelete, blockRefresh }: {
+export default function AgendaCalendar({ appointments, onSlotClick, onAppointmentClick, onMoveAppointment, onMoveBlock, onBlockClick, onBlockDelete, blockRefresh }: {
   appointments: any[];
   onSlotClick: (date: Date) => void;
   onAppointmentClick: (apt: any) => void;
   onMoveAppointment: (id: string, date: Date) => void;
+  onMoveBlock: (id: string, date: Date) => void;
   onBlockClick: (block: Block) => void;
   onBlockDelete: (id: string) => void | Promise<void>;
   blockRefresh?: number;
@@ -73,9 +74,14 @@ export default function AgendaCalendar({ appointments, onSlotClick, onAppointmen
   const [settings, setSettings] = useState<any>({ openDays: '1,2,3,4,5', openTime: '09:00', closeTime: '18:00', breakMinutes: 15 });
   const [loadingSettings, setLoadingSettings] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
-  // Glisser-déposer tactile (pointer events) : marche à la souris ET au doigt
-  const pending = useRef<{ apt: any; startX: number; startY: number; pid: number; moved: boolean } | null>(null);
-  const [ghost, setGhost] = useState<{ apt: any; x: number; y: number; label: string } | null>(null);
+  // Glisser-déposer : poignée dédiée. Souris = immédiat ; tactile = appui long (anti-scroll accidentel).
+  const LONG_PRESS_MS = 550;
+  const pending = useRef<{ id: string; kind: 'apt' | 'block'; item: any; startX: number; startY: number; pid: number; armed: boolean; moved: boolean } | null>(null);
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastDrag = useRef(0); // horodatage de fin de déplacement (anti clic fantôme)
+  const [holdingId, setHoldingId] = useState<string>(''); // appui en cours (pas encore armé)
+  const [armedId, setArmedId] = useState<string>('');     // prêt à déplacer
+  const [ghost, setGhost] = useState<{ item: any; kind: 'apt' | 'block'; x: number; y: number; label: string } | null>(null);
   const [overCol, setOverCol] = useState<number | null>(null);
 
   // Horaires d'ouverture récurrents (AvailabilityWindow) + fermetures exceptionnelles
@@ -122,6 +128,7 @@ export default function AgendaCalendar({ appointments, onSlotClick, onAppointmen
   useEffect(() => { if (showSettings) loadSettings(); }, [showSettings]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadBlocks(); }, [weekStart, blockRefresh]);
+  useEffect(() => () => { if (holdTimer.current) clearTimeout(holdTimer.current); }, []);
 
   const saveSettings = async (patch: any) => {
     setSavingSettings(true);
@@ -212,32 +219,54 @@ export default function AgendaCalendar({ appointments, onSlotClick, onAppointmen
     return { idx, date: dateFromOffset(days[idx], clientY - rect.top) };
   };
 
-  const onAptPointerDown = (e: React.PointerEvent, apt: any) => {
-    if ((e.target as HTMLElement).closest('[data-del]')) return;
+  const clearHold = () => { if (holdTimer.current) { clearTimeout(holdTimer.current); holdTimer.current = null; } };
+  const resetDrag = () => { pending.current = null; clearHold(); setHoldingId(''); setArmedId(''); setGhost(null); setOverCol(null); };
+
+  const labelFor = (date: Date) => `${date.toLocaleDateString('fr-FR', { weekday: 'short' })} ${date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+
+  // Appui sur la POIGNÉE d'un élément (RDV ou blocage)
+  const onGripDown = (e: React.PointerEvent, id: string, kind: 'apt' | 'block', item: any) => {
+    e.stopPropagation();
     try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch {}
-    pending.current = { apt, startX: e.clientX, startY: e.clientY, pid: e.pointerId, moved: false };
+    const isMouse = e.pointerType === 'mouse';
+    pending.current = { id, kind, item, startX: e.clientX, startY: e.clientY, pid: e.pointerId, armed: isMouse, moved: false };
+    setHoldingId(id);
+    if (isMouse) { setArmedId(id); }
+    else {
+      holdTimer.current = setTimeout(() => {
+        if (pending.current && pending.current.id === id) {
+          pending.current.armed = true;
+          setArmedId(id);
+          try { (navigator as any).vibrate?.(25); } catch {}
+        }
+      }, LONG_PRESS_MS);
+    }
   };
-  const onAptPointerMove = (e: React.PointerEvent) => {
+  const onGripMove = (e: React.PointerEvent) => {
     const p = pending.current;
     if (!p || p.pid !== e.pointerId) return;
-    if (!p.moved && Math.hypot(e.clientX - p.startX, e.clientY - p.startY) < 6) return;
+    const dist = Math.hypot(e.clientX - p.startX, e.clientY - p.startY);
+    if (!p.armed) {
+      // Bouge avant la fin de l'appui long → on annule (évite les déplacements involontaires)
+      if (dist > 12) resetDrag();
+      return;
+    }
+    e.preventDefault();
     p.moved = true;
     const t = computeTarget(e.clientX, e.clientY);
     setOverCol(t?.idx ?? null);
-    const label = t ? `${t.date.toLocaleDateString('fr-FR', { weekday: 'short' })} ${t.date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}` : '';
-    setGhost({ apt: p.apt, x: e.clientX, y: e.clientY, label });
+    setGhost({ item: p.item, kind: p.kind, x: e.clientX, y: e.clientY, label: t ? labelFor(t.date) : '' });
   };
-  const onAptPointerUp = (e: React.PointerEvent, apt: any) => {
+  const onGripUp = (e: React.PointerEvent) => {
     const p = pending.current;
-    pending.current = null;
-    setGhost(null);
-    setOverCol(null);
-    if (!p) return;
-    if (!p.moved) { onAppointmentClick(apt); return; } // simple clic/tap → ouvrir
-    const t = computeTarget(e.clientX, e.clientY);
-    if (t) onMoveAppointment(apt.id, t.date);
+    const t = p && p.armed && p.moved ? computeTarget(e.clientX, e.clientY) : null;
+    if (p && p.moved) lastDrag.current = Date.now();
+    if (p && t) {
+      if (p.kind === 'apt') onMoveAppointment(p.id, t.date);
+      else onMoveBlock(p.id, t.date);
+    }
+    resetDrag();
   };
-  const onAptPointerCancel = () => { pending.current = null; setGhost(null); setOverCol(null); };
 
   const openDaysArr = (settings.openDays ?? '').split(',').filter(Boolean).map(Number);
 
@@ -265,7 +294,7 @@ export default function AgendaCalendar({ appointments, onSlotClick, onAppointmen
         <button onClick={() => setShowSettings(true)} className="px-4 py-2 bg-white text-[#3B312D] text-sm rounded-lg shadow-sm flex items-center gap-2"><Settings size={14} />Horaires type</button>
       </div>
 
-      <p className="text-xs text-[#3B312D]/40 mb-2">Cliquez sur l'<strong>en-tête d'un jour</strong> pour gérer ses horaires. Cliquez sur un créneau libre pour créer un RDV (ou le bloquer), sur un RDV pour l'ouvrir. <strong>Glissez un RDV</strong> (au doigt ou à la souris) pour le déplacer à un autre jour/heure — l'heure cible s'affiche pendant le déplacement.</p>
+      <p className="text-xs text-[#3B312D]/40 mb-2">Cliquez sur l'<strong>en-tête d'un jour</strong> pour gérer ses horaires. Cliquez sur un créneau libre pour créer un RDV (ou le bloquer), sur un RDV pour l'ouvrir. Pour <strong>déplacer</strong> un RDV ou un blocage : attrapez la <strong>poignée</strong> <GripVertical size={11} className="inline -mt-0.5 text-[#3B312D]/60" /> (sur mobile, maintenez le doigt ~½ s dessus jusqu'à la vibration, puis glissez). L'heure cible s'affiche pendant le déplacement.</p>
 
       <div className="bg-white rounded-xl shadow-sm overflow-x-auto">
         <div className="flex min-w-[900px]">
@@ -340,18 +369,25 @@ export default function AgendaCalendar({ appointments, onSlotClick, onAppointmen
                     <div
                       key={apt.id}
                       data-appointment-block
-                      onPointerDown={(e) => onAptPointerDown(e, apt)}
-                      onPointerMove={onAptPointerMove}
-                      onPointerUp={(e) => onAptPointerUp(e, apt)}
-                      onPointerCancel={onAptPointerCancel}
-                      style={{ top, height, left: 2, right: 2, touchAction: 'none' }}
-                      className={`absolute rounded-md border px-1.5 py-1 text-[10px] leading-tight overflow-hidden hover:shadow-md transition-shadow z-10 cursor-grab active:cursor-grabbing select-none ${color} ${ghost?.apt?.id === apt.id ? 'opacity-40' : ''} ${apt?.status === 'CANCELLED' ? 'line-through' : ''}`}
+                      onClick={(e) => { e.stopPropagation(); if (Date.now() - lastDrag.current < 400 || armedId === apt.id) return; onAppointmentClick(apt); }}
+                      style={{ top, height, left: 2, right: 2 }}
+                      className={`absolute rounded-md border pl-1.5 pr-5 py-1 text-[10px] leading-tight overflow-hidden transition-all z-10 select-none ${color} ${apt?.status === 'CANCELLED' ? 'line-through' : ''} ${armedId === apt.id ? 'z-40 scale-[1.04] shadow-xl ring-2 ring-[#C98F79]' : 'hover:shadow-md'} ${holdingId === apt.id && armedId !== apt.id ? 'ring-2 ring-[#C98F79]/50' : ''} ${ghost?.kind === 'apt' && ghost?.item?.id === apt.id ? 'opacity-40' : ''}`}
                     >
                       <p className="font-semibold text-[#3B312D] truncate flex items-center gap-1">
                         {d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} · {apt?.serviceType ?? ''}
                         {isPaid && <Euro size={9} className="text-[#AAB7A0] flex-shrink-0" />}
                       </p>
                       <p className="text-[#3B312D]/70 truncate">{apt?.user?.firstName ?? ''} {apt?.user?.lastName ?? ''}</p>
+                      <button type="button" data-grip aria-label="Maintenir pour déplacer le rendez-vous"
+                        onPointerDown={(e) => onGripDown(e, apt.id, 'apt', apt)}
+                        onPointerMove={onGripMove}
+                        onPointerUp={onGripUp}
+                        onPointerCancel={resetDrag}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ touchAction: 'none' }}
+                        className={`absolute top-0 right-0 h-full w-5 flex items-center justify-center cursor-grab active:cursor-grabbing ${armedId === apt.id ? 'bg-[#C98F79]/40' : 'bg-black/5 hover:bg-black/10'}`}>
+                        <GripVertical size={12} className="text-[#3B312D]/55" />
+                      </button>
                     </div>
                   );
                 })}
@@ -363,12 +399,22 @@ export default function AgendaCalendar({ appointments, onSlotClick, onAppointmen
                   const reason = (b.reason || '').trim();
                   return (
                     <div key={b.id} data-block-block style={{ top, height, left: 2, right: 2 }}
-                      onClick={(e) => { e.stopPropagation(); onBlockClick(b); }}
+                      onClick={(e) => { e.stopPropagation(); if (Date.now() - lastDrag.current < 400 || armedId === b.id) return; onBlockClick(b); }}
                       title="Modifier ce blocage (début, fin, durée)"
-                      className="absolute rounded-md border border-[#3B312D]/30 bg-[repeating-linear-gradient(45deg,#e9e6e1,#e9e6e1_5px,#dcd8d2_5px,#dcd8d2_10px)] px-1.5 py-0.5 text-[10px] text-[#3B312D]/70 overflow-hidden z-20 cursor-pointer hover:border-[#3B312D]/60">
+                      className={`absolute rounded-md border pl-6 pr-4 py-0.5 text-[10px] text-[#3B312D]/70 overflow-hidden z-20 cursor-pointer transition-all bg-[repeating-linear-gradient(45deg,#e9e6e1,#e9e6e1_5px,#dcd8d2_5px,#dcd8d2_10px)] ${armedId === b.id ? 'z-40 scale-[1.04] shadow-xl ring-2 ring-[#3B312D]/60 border-[#3B312D]/60' : 'border-[#3B312D]/30 hover:border-[#3B312D]/60'} ${holdingId === b.id && armedId !== b.id ? 'ring-2 ring-[#3B312D]/40' : ''} ${ghost?.kind === 'block' && ghost?.item?.id === b.id ? 'opacity-40' : ''}`}>
                       <span className="flex items-center gap-1 font-medium"><Lock size={9} />{d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
                       {reason && <span className="block truncate text-[#3B312D]/55">{reason}</span>}
-                      <button onClick={(e) => { e.stopPropagation(); onBlockDelete(b.id); }} className="absolute top-0.5 right-0.5 bg-white/90 text-red-500 rounded-full p-0.5 hover:bg-white" aria-label="Débloquer"><X size={10} /></button>
+                      <button type="button" data-grip aria-label="Maintenir pour déplacer le blocage"
+                        onPointerDown={(e) => onGripDown(e, b.id, 'block', b)}
+                        onPointerMove={onGripMove}
+                        onPointerUp={onGripUp}
+                        onPointerCancel={resetDrag}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ touchAction: 'none' }}
+                        className={`absolute top-0 left-0 h-full w-5 flex items-center justify-center cursor-grab active:cursor-grabbing ${armedId === b.id ? 'bg-[#3B312D]/20' : 'bg-black/5 hover:bg-black/10'}`}>
+                        <GripVertical size={12} className="text-[#3B312D]/55" />
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); onBlockDelete(b.id); }} data-del className="absolute top-0.5 right-0.5 bg-white/90 text-red-500 rounded-full p-0.5 hover:bg-white" aria-label="Débloquer"><X size={10} /></button>
                     </div>
                   );
                 })}
@@ -384,7 +430,11 @@ export default function AgendaCalendar({ appointments, onSlotClick, onAppointmen
         <div className="fixed z-[60] pointer-events-none" style={{ left: ghost.x + 14, top: ghost.y + 14 }}>
           <div className="rounded-md border border-[#C98F79] bg-white shadow-lg px-2.5 py-1.5 text-[11px] text-[#3B312D]">
             <span className="font-semibold">{ghost.label}</span>
-            <span className="block text-[#3B312D]/60 truncate max-w-[180px]">{ghost.apt?.serviceType ?? 'Soin'} · {ghost.apt?.user?.firstName ?? ''} {ghost.apt?.user?.lastName ?? ''}</span>
+            <span className="block text-[#3B312D]/60 truncate max-w-[180px]">
+              {ghost.kind === 'block'
+                ? (((ghost.item?.reason ?? '').trim()) || 'Créneau bloqué')
+                : `${ghost.item?.serviceType ?? 'Soin'} · ${ghost.item?.user?.firstName ?? ''} ${ghost.item?.user?.lastName ?? ''}`}
+            </span>
           </div>
         </div>
       )}

@@ -1,5 +1,6 @@
 'use client';
 import { motion, useScroll, useSpring, useTransform } from 'framer-motion';
+import { usePathname } from 'next/navigation';
 
 /** Petite fleur (5 pétales) — marqueur de progression. */
 function Flower() {
@@ -19,10 +20,14 @@ function Flower() {
  * qui avance (et tourne) selon la progression du scroll de la page.
  */
 export default function ScrollFlower() {
+  const pathname = usePathname();
   const { scrollYProgress } = useScroll();
   const p = useSpring(scrollYProgress, { stiffness: 90, damping: 26, mass: 0.35 });
   const left = useTransform(p, [0, 1], ['0%', '100%']);
   const rotate = useTransform(p, [0, 1], [0, 540]);
+
+  // Pas de barre de progression dans l'espace admin (agenda, etc.)
+  if (pathname?.startsWith('/admin')) return null;
 
   return (
     <div className="fixed inset-x-0 bottom-[calc(4rem_+_env(safe-area-inset-bottom))] lg:bottom-0 z-30 pointer-events-none">
