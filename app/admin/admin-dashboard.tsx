@@ -407,6 +407,7 @@ export default function AdminDashboard({ agendaOnly = false }: { agendaOnly?: bo
     setSaving(false);
   };
   const deleteBlock = async (id: string) => {
+    if (!confirm('Supprimer ce créneau bloqué ?')) return;
     try {
       const res = await fetch(`/api/admin/agenda-blocks?id=${id}`, { method: 'DELETE' });
       if (res.ok) { toast.success('Créneau débloqué'); setShowModal(null); setBlockForm(false); setBlockRefresh((x) => x + 1); } else toast.error('Erreur');
@@ -1368,6 +1369,20 @@ export default function AdminDashboard({ agendaOnly = false }: { agendaOnly?: bo
                 {showModal === 'edit-appointment' && modalData?.id && (
                   <button onClick={() => duplicateAppointment(modalData)} className="w-full py-2.5 bg-white border border-[#3B312D]/20 text-[#3B312D] text-sm font-medium rounded-lg hover:bg-[#3B312D]/5 flex items-center justify-center gap-2">
                     <Plus size={14} />Dupliquer ce RDV à un autre jour
+                  </button>
+                )}
+
+                {showModal === 'edit-appointment' && modalData?.id && (
+                  <button onClick={async () => {
+                      if (!confirm('Supprimer définitivement ce rendez-vous ? Cette action est irréversible.')) return;
+                      try {
+                        const res = await fetch(`/api/admin/appointments?id=${modalData.id}`, { method: 'DELETE' });
+                        if (res.ok) { toast.success('Rendez-vous supprimé'); setShowModal(null); refreshData(); }
+                        else toast.error('Erreur');
+                      } catch { toast.error('Erreur'); }
+                    }}
+                    className="w-full py-2.5 bg-red-50 text-red-600 text-sm font-medium rounded-lg hover:bg-red-100 flex items-center justify-center gap-2">
+                    <Trash2 size={14} />Supprimer ce rendez-vous
                   </button>
                 )}
 

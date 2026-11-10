@@ -466,7 +466,8 @@ export default function AgendaCalendar({ appointments, onSlotClick, onAppointmen
                   const top = (minutesSinceStart(d) / 60) * ROW_HEIGHT;
                   const height = Math.max(((b.duration ?? 60) / 60) * ROW_HEIGHT, 20);
                   const reason = (b.reason || '').trim();
-                  const brule = matchColorRule(reason, colorRules);
+                  // Un blocage = temps perso par défaut : couleur « Perso » sauf si le motif correspond à une autre règle (ex. « Admin »).
+                  const brule = matchColorRule(reason, colorRules) || colorRules.find((r) => (r.label || '').trim().toLowerCase() === 'perso') || null;
                   return (
                     <div key={b.id} data-block-block style={{ top, height, left: 2, right: 2, ...(brule ? { backgroundColor: brule.color + '2E', borderColor: brule.color } : {}) }}
                       onClick={(e) => { e.stopPropagation(); if (Date.now() - lastDrag.current < 400 || armedId === b.id) return; onBlockClick(b); }}
