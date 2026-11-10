@@ -27,7 +27,7 @@ export default function ScrollFlower() {
   const rotate = useTransform(p, [0, 1], [0, 540]);
 
   // Pas de barre de progression dans l'espace admin (agenda, etc.)
-  if (pathname?.startsWith('/admin')) return null;
+  if (pathname?.startsWith('/admin') || pathname?.startsWith('/agenda')) return null;
 
   return (
     <div className="fixed inset-x-0 bottom-[calc(4rem_+_env(safe-area-inset-bottom))] lg:bottom-0 z-30 pointer-events-none">

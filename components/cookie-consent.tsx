@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 
 /**
@@ -11,6 +12,7 @@ import Link from 'next/link';
 const KEY = 'holisya_consent_v1';
 
 export default function CookieConsent() {
+  const pathname = usePathname();
   const [show, setShow] = useState(false);
 
   useEffect(() => {
@@ -32,6 +34,7 @@ export default function CookieConsent() {
     setShow(false);
   };
 
+  if (pathname?.startsWith('/admin') || pathname?.startsWith('/agenda')) return null;
   if (!show) return null;
 
   return (

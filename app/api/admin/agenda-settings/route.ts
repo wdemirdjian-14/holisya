@@ -25,6 +25,7 @@ export async function PUT(req: NextRequest) {
         openTime: data?.openTime ?? undefined,
         closeTime: data?.closeTime ?? undefined,
         breakMinutes: data?.breakMinutes !== undefined ? parseInt(data.breakMinutes) : undefined,
+        colorRules: typeof data?.colorRules === 'string' ? data.colorRules : undefined,
       },
       create: {
         id: 'global',
@@ -32,6 +33,7 @@ export async function PUT(req: NextRequest) {
         openTime: data?.openTime ?? '09:00',
         closeTime: data?.closeTime ?? '18:00',
         breakMinutes: data?.breakMinutes !== undefined ? parseInt(data.breakMinutes) : 15,
+        colorRules: typeof data?.colorRules === 'string' ? data.colorRules : '',
       },
     });
     return NextResponse.json({ settings });

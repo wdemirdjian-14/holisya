@@ -303,6 +303,7 @@ model AgendaSettings {
   openTime     String   @default("09:00")
   closeTime    String   @default("18:00")
   breakMinutes Int      @default(15)
+  colorRules   String   @default("")
   updatedAt    DateTime @updatedAt
 }
 

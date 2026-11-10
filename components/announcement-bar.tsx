@@ -14,7 +14,7 @@ const KEY = 'holisya_ann_antibes_v1';
 
 export default function AnnouncementBar() {
   const pathname = usePathname() || '';
-  const hiddenHere = pathname.startsWith('/admin') || pathname.startsWith('/rendez-vous');
+  const hiddenHere = pathname.startsWith('/admin') || pathname.startsWith('/rendez-vous') || pathname.startsWith('/agenda');
   const [dismissed, setDismissed] = useState(true); // true par défaut → évite le flash avant lecture localStorage
 
   useEffect(() => {

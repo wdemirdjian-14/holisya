@@ -1,7 +1,39 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Settings, X, Loader2, Euro, Clock, Copy, Ban, Sparkles, Trash2, Lock, GripVertical } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Settings, X, Loader2, Euro, Clock, Copy, Ban, Sparkles, Trash2, Lock, GripVertical, Palette, Maximize2, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
+
+// Couleurs par type de prestation (paramétrables). Un RDV est coloré selon son
+// serviceType, un blocage selon son motif : première règle dont un mot-clé
+// (séparés par des virgules) apparaît dans le texte (insensible à la casse).
+type ColorRule = { label: string; color: string; keywords: string };
+const DEFAULT_COLOR_RULES: ColorRule[] = [
+  { label: 'Kobido', color: '#C98F79', keywords: 'kobido' },
+  { label: 'Drainage', color: '#7FA8B0', keywords: 'drainage' },
+  { label: 'Madero', color: '#B9896B', keywords: 'madero' },
+  { label: 'Nutrition', color: '#E0A458', keywords: 'nutrition,bilan' },
+  { label: 'Soin visage', color: '#B08BBE', keywords: 'visage,glow' },
+  { label: 'Cure', color: '#6E8E7E', keywords: 'cure' },
+  { label: 'Perso', color: '#8A8178', keywords: 'perso,pause,congé,conge,rdv perso' },
+  { label: 'Admin', color: '#5B7DB1', keywords: 'admin,ménage,menage,compta' },
+];
+function parseColorRules(raw: any): ColorRule[] {
+  try {
+    const a = JSON.parse(raw || '[]');
+    if (Array.isArray(a) && a.length) return a.filter((r: any) => r && typeof r.color === 'string');
+  } catch {}
+  return DEFAULT_COLOR_RULES;
+}
+function matchColorRule(text: string, rules: ColorRule[]): ColorRule | null {
+  const t = (text || '').toLowerCase();
+  if (!t) return null;
+  for (const r of rules) {
+    const kws = (r.keywords || '').split(',').map((k) => k.trim().toLowerCase()).filter(Boolean);
+    if (kws.some((k) => t.includes(k))) return r;
+  }
+  return null;
+}
+const STATUS_DOT: Record<string, string> = { CONFIRMED: '#AAB7A0', COMPLETED: '#3B312D', CANCELLED: '#ef4444', PENDING: '#C98F79' };
 
 function startOfWeek(date: Date): Date {
   const d = new Date(date);
@@ -58,7 +90,7 @@ type Win = { id: string; weekday: number; startTime: string; endTime: string };
 type Closure = { id: string; date: string };
 type Block = { id: string; date: string; duration: number; reason: string };
 
-export default function AgendaCalendar({ appointments, onSlotClick, onAppointmentClick, onMoveAppointment, onMoveBlock, onBlockClick, onBlockDelete, blockRefresh }: {
+export default function AgendaCalendar({ appointments, onSlotClick, onAppointmentClick, onMoveAppointment, onMoveBlock, onBlockClick, onBlockDelete, blockRefresh, fullscreenHref }: {
   appointments: any[];
   onSlotClick: (date: Date) => void;
   onAppointmentClick: (apt: any) => void;
@@ -67,6 +99,7 @@ export default function AgendaCalendar({ appointments, onSlotClick, onAppointmen
   onBlockClick: (block: Block) => void;
   onBlockDelete: (id: string) => void | Promise<void>;
   blockRefresh?: number;
+  fullscreenHref?: string;
 }) {
   const today = new Date();
   const [weekStart, setWeekStart] = useState<Date>(startOfWeek(new Date()));
@@ -74,6 +107,11 @@ export default function AgendaCalendar({ appointments, onSlotClick, onAppointmen
   const [settings, setSettings] = useState<any>({ openDays: '1,2,3,4,5', openTime: '09:00', closeTime: '18:00', breakMinutes: 15 });
   const [loadingSettings, setLoadingSettings] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
+  // Couleurs par type de prestation
+  const [colorRules, setColorRules] = useState<ColorRule[]>(DEFAULT_COLOR_RULES);
+  const [showColors, setShowColors] = useState(false);
+  const [draftRules, setDraftRules] = useState<ColorRule[]>(DEFAULT_COLOR_RULES);
+  const [savingColors, setSavingColors] = useState(false);
   // Glisser-déposer : poignée dédiée. Souris = immédiat ; tactile = appui long (anti-scroll accidentel).
   const LONG_PRESS_MS = 550;
   const pending = useRef<{ id: string; kind: 'apt' | 'block'; item: any; startX: number; startY: number; pid: number; armed: boolean; moved: boolean } | null>(null);
@@ -113,7 +151,7 @@ export default function AgendaCalendar({ appointments, onSlotClick, onAppointmen
 
   const loadSettings = () => {
     setLoadingSettings(true);
-    fetch('/api/admin/agenda-settings').then(r => r.json()).then(d => { if (d?.settings) setSettings(d.settings); setLoadingSettings(false); }).catch(() => setLoadingSettings(false));
+    fetch('/api/admin/agenda-settings').then(r => r.json()).then(d => { if (d?.settings) { setSettings(d.settings); setColorRules(parseColorRules(d.settings.colorRules)); } setLoadingSettings(false); }).catch(() => setLoadingSettings(false));
   };
   const loadAvailability = () => {
     fetch('/api/admin/availability').then(r => r.json()).then(d => { setWindows(d?.windows ?? []); setClosures(d?.closures ?? []); }).catch(() => {});
@@ -139,6 +177,18 @@ export default function AgendaCalendar({ appointments, onSlotClick, onAppointmen
       if (res.ok) toast.success('Réglages enregistrés'); else toast.error('Erreur');
     } catch { toast.error('Erreur'); }
     setSavingSettings(false);
+  };
+
+  const openColors = () => { setDraftRules(colorRules.length ? colorRules : DEFAULT_COLOR_RULES); setShowColors(true); };
+  const saveColors = async () => {
+    const clean = draftRules.filter((r) => (r.label || '').trim() || (r.keywords || '').trim());
+    setSavingColors(true);
+    try {
+      const res = await fetch('/api/admin/agenda-settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...settings, colorRules: JSON.stringify(clean) }) });
+      if (res.ok) { setColorRules(clean); setSettings({ ...settings, colorRules: JSON.stringify(clean) }); toast.success('Couleurs enregistrées'); setShowColors(false); }
+      else toast.error('Erreur');
+    } catch { toast.error('Erreur'); }
+    setSavingColors(false);
   };
 
   // --- Gestion des horaires d'ouverture (créneaux récurrents) ---
@@ -292,10 +342,26 @@ export default function AgendaCalendar({ appointments, onSlotClick, onAppointmen
           <button onClick={() => setWeekStart(d => { const n = new Date(d); n.setDate(n.getDate() + 7); return n; })} className="p-2 rounded-lg bg-white shadow-sm hover:bg-[#F8F4EF]"><ChevronRight size={16} /></button>
           <span className="text-sm text-[#3B312D]/60 ml-2">{days[0].toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} — {days[6].toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
         </div>
-        <button onClick={() => setShowSettings(true)} className="px-4 py-2 bg-white text-[#3B312D] text-sm rounded-lg shadow-sm flex items-center gap-2"><Settings size={14} />Horaires type</button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button onClick={openColors} className="px-3 py-2 bg-white text-[#3B312D] text-sm rounded-lg shadow-sm flex items-center gap-2"><Palette size={14} />Couleurs</button>
+          <button onClick={() => setShowSettings(true)} className="px-3 py-2 bg-white text-[#3B312D] text-sm rounded-lg shadow-sm flex items-center gap-2"><Settings size={14} />Horaires type</button>
+          {fullscreenHref && <a href={fullscreenHref} className="px-3 py-2 bg-[#3B312D] text-white text-sm rounded-lg shadow-sm flex items-center gap-2" title="Ouvrir l'agenda en plein écran (installable en application)"><Maximize2 size={14} />Plein écran</a>}
+        </div>
       </div>
 
       <p className="text-xs text-[#3B312D]/40 mb-2">Cliquez sur l'<strong>en-tête d'un jour</strong> pour gérer ses horaires. Cliquez sur un créneau libre pour créer un RDV (ou le bloquer), sur un RDV pour l'ouvrir. Pour <strong>déplacer</strong> un RDV ou un blocage : attrapez la <strong>poignée</strong> <GripVertical size={11} className="inline -mt-0.5 text-[#3B312D]/60" /> (sur mobile, maintenez le doigt ~½ s dessus jusqu'à la vibration, puis glissez). L'heure cible s'affiche pendant le déplacement.</p>
+
+      {colorRules.length > 0 && (
+        <div className="flex items-center gap-x-3 gap-y-1 flex-wrap mb-3">
+          {colorRules.map((r, i) => (
+            <span key={i} className="inline-flex items-center gap-1.5 text-[11px] text-[#3B312D]/60">
+              <span className="w-3 h-3 rounded-sm border" style={{ backgroundColor: r.color + '33', borderColor: r.color }} />
+              {r.label}
+            </span>
+          ))}
+          <button onClick={openColors} className="text-[11px] text-[#C98F79] underline hover:text-[#C98F79]/80">Modifier les couleurs</button>
+        </div>
+      )}
 
       <div className="bg-white rounded-xl shadow-sm overflow-x-auto">
         <div className="flex min-w-[900px] select-none" style={{ userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none' }}>
@@ -365,14 +431,16 @@ export default function AgendaCalendar({ appointments, onSlotClick, onAppointmen
                   const top = (minutesSinceStart(d) / 60) * ROW_HEIGHT;
                   const height = Math.max(((apt?.duration ?? 60) / 60) * ROW_HEIGHT, 22);
                   const isPaid = (apt?.payments ?? []).length > 0;
-                  const color = apt?.status === 'CONFIRMED' ? 'bg-[#AAB7A0]/25 border-[#AAB7A0]' : apt?.status === 'CANCELLED' ? 'bg-red-50 border-red-200 opacity-60' : apt?.status === 'COMPLETED' ? 'bg-[#3B312D]/10 border-[#3B312D]/20' : 'bg-[#C98F79]/20 border-[#C98F79]';
+                  const rule = matchColorRule(apt?.serviceType ?? '', colorRules);
+                  const statusColor = apt?.status === 'CONFIRMED' ? 'bg-[#AAB7A0]/25 border-[#AAB7A0]' : apt?.status === 'CANCELLED' ? 'bg-red-50 border-red-200 opacity-60' : apt?.status === 'COMPLETED' ? 'bg-[#3B312D]/10 border-[#3B312D]/20' : 'bg-[#C98F79]/20 border-[#C98F79]';
+                  const dot = STATUS_DOT[apt?.status] ?? STATUS_DOT.PENDING;
                   return (
                     <div
                       key={apt.id}
                       data-appointment-block
                       onClick={(e) => { e.stopPropagation(); if (Date.now() - lastDrag.current < 400 || armedId === apt.id) return; onAppointmentClick(apt); }}
-                      style={{ top, height, left: 2, right: 2 }}
-                      className={`absolute rounded-md border pl-1.5 pr-5 py-1 text-[10px] leading-tight overflow-hidden transition-all z-10 select-none ${color} ${apt?.status === 'CANCELLED' ? 'line-through' : ''} ${armedId === apt.id ? 'z-40 scale-[1.04] shadow-xl ring-2 ring-[#C98F79]' : 'hover:shadow-md'} ${holdingId === apt.id && armedId !== apt.id ? 'ring-2 ring-[#C98F79]/50' : ''} ${ghost?.kind === 'apt' && ghost?.item?.id === apt.id ? 'opacity-40' : ''}`}
+                      style={{ top, height, left: 2, right: 2, borderLeftWidth: 3, borderLeftColor: dot, ...(rule ? { backgroundColor: rule.color + '26', borderColor: rule.color, borderLeftColor: dot } : {}) }}
+                      className={`absolute rounded-md border pl-1.5 pr-5 py-1 text-[10px] leading-tight overflow-hidden transition-all z-10 select-none ${rule ? '' : statusColor} ${apt?.status === 'CANCELLED' ? 'line-through opacity-60' : ''} ${armedId === apt.id ? 'z-40 scale-[1.04] shadow-xl ring-2 ring-[#C98F79]' : 'hover:shadow-md'} ${holdingId === apt.id && armedId !== apt.id ? 'ring-2 ring-[#C98F79]/50' : ''} ${ghost?.kind === 'apt' && ghost?.item?.id === apt.id ? 'opacity-40' : ''}`}
                     >
                       <p className="font-semibold text-[#3B312D] truncate flex items-center gap-1">
                         {d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} · {apt?.serviceType ?? ''}
@@ -398,11 +466,12 @@ export default function AgendaCalendar({ appointments, onSlotClick, onAppointmen
                   const top = (minutesSinceStart(d) / 60) * ROW_HEIGHT;
                   const height = Math.max(((b.duration ?? 60) / 60) * ROW_HEIGHT, 20);
                   const reason = (b.reason || '').trim();
+                  const brule = matchColorRule(reason, colorRules);
                   return (
-                    <div key={b.id} data-block-block style={{ top, height, left: 2, right: 2 }}
+                    <div key={b.id} data-block-block style={{ top, height, left: 2, right: 2, ...(brule ? { backgroundColor: brule.color + '2E', borderColor: brule.color } : {}) }}
                       onClick={(e) => { e.stopPropagation(); if (Date.now() - lastDrag.current < 400 || armedId === b.id) return; onBlockClick(b); }}
                       title="Modifier ce blocage (début, fin, durée)"
-                      className={`absolute rounded-md border pl-6 pr-4 py-0.5 text-[10px] text-[#3B312D]/70 overflow-hidden z-20 cursor-pointer transition-all bg-[repeating-linear-gradient(45deg,#e9e6e1,#e9e6e1_5px,#dcd8d2_5px,#dcd8d2_10px)] ${armedId === b.id ? 'z-40 scale-[1.04] shadow-xl ring-2 ring-[#3B312D]/60 border-[#3B312D]/60' : 'border-[#3B312D]/30 hover:border-[#3B312D]/60'} ${holdingId === b.id && armedId !== b.id ? 'ring-2 ring-[#3B312D]/40' : ''} ${ghost?.kind === 'block' && ghost?.item?.id === b.id ? 'opacity-40' : ''}`}>
+                      className={`absolute rounded-md border pl-6 pr-4 py-0.5 text-[10px] text-[#3B312D]/70 overflow-hidden z-20 cursor-pointer transition-all ${brule ? '' : 'bg-[repeating-linear-gradient(45deg,#e9e6e1,#e9e6e1_5px,#dcd8d2_5px,#dcd8d2_10px)]'} ${armedId === b.id ? 'z-40 scale-[1.04] shadow-xl ring-2 ring-[#3B312D]/60 border-[#3B312D]/60' : brule ? '' : 'border-[#3B312D]/30 hover:border-[#3B312D]/60'} ${holdingId === b.id && armedId !== b.id ? 'ring-2 ring-[#3B312D]/40' : ''} ${ghost?.kind === 'block' && ghost?.item?.id === b.id ? 'opacity-40' : ''}`}>
                       <span className="flex items-center gap-1 font-medium"><Lock size={9} />{d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
                       {reason && <span className="block truncate text-[#3B312D]/55">{reason}</span>}
                       <button type="button" data-grip aria-label="Maintenir pour déplacer le blocage"
@@ -558,6 +627,51 @@ export default function AgendaCalendar({ appointments, onSlotClick, onAppointmen
                 {savingSettings && <p className="text-xs text-[#C98F79]">Enregistrement...</p>}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Éditeur des couleurs par type de prestation */}
+      {showColors && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowColors(false)}>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e: any) => e.stopPropagation()}>
+            <div className="flex items-start justify-between mb-1">
+              <div>
+                <h3 className="font-playfair text-lg font-semibold text-[#3B312D] flex items-center gap-2"><Palette size={18} className="text-[#C98F79]" />Couleurs de l'agenda</h3>
+                <p className="text-xs text-[#3B312D]/50 mt-0.5">Chaque règle colore les RDV (selon le soin) et les blocages (selon le motif). Un élément prend la couleur de la <strong>première règle</strong> dont un mot-clé apparaît dans son texte.</p>
+              </div>
+              <button onClick={() => setShowColors(false)} className="p-1.5 rounded hover:bg-[#F8F4EF] flex-none"><X size={18} /></button>
+            </div>
+
+            <div className="mt-4 space-y-2">
+              <div className="hidden sm:flex items-center gap-2 px-1 text-[10px] font-semibold uppercase text-[#3B312D]/40">
+                <span className="w-9" />
+                <span className="flex-1">Nom</span>
+                <span className="flex-[1.4]">Mots-clés (séparés par des virgules)</span>
+                <span className="w-6" />
+              </div>
+              {draftRules.map((r, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <input type="color" value={r.color} onChange={(e) => setDraftRules(draftRules.map((x, j) => j === i ? { ...x, color: e.target.value } : x))}
+                    className="w-9 h-9 flex-none rounded-lg border border-[#F8F4EF] cursor-pointer bg-white p-0.5" aria-label="Couleur" />
+                  <input value={r.label} onChange={(e) => setDraftRules(draftRules.map((x, j) => j === i ? { ...x, label: e.target.value } : x))}
+                    placeholder="Kobido" className="flex-1 min-w-0 px-2 py-1.5 text-sm border border-[#F8F4EF] rounded-lg text-[#3B312D]" />
+                  <input value={r.keywords} onChange={(e) => setDraftRules(draftRules.map((x, j) => j === i ? { ...x, keywords: e.target.value } : x))}
+                    placeholder="kobido, visage" className="flex-[1.4] min-w-0 px-2 py-1.5 text-sm border border-[#F8F4EF] rounded-lg text-[#3B312D]" />
+                  <button onClick={() => setDraftRules(draftRules.filter((_, j) => j !== i))} className="p-1.5 rounded hover:bg-red-50 flex-none" aria-label="Supprimer"><Trash2 size={14} className="text-red-500" /></button>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-between mt-3 flex-wrap gap-2">
+              <button onClick={() => setDraftRules([...draftRules, { label: '', color: '#C98F79', keywords: '' }])} className="text-sm px-3 py-1.5 rounded-lg border border-[#C98F79]/40 text-[#C98F79] hover:bg-[#C98F79]/10 flex items-center gap-1.5"><Plus size={14} />Ajouter une couleur</button>
+              <button onClick={() => setDraftRules(DEFAULT_COLOR_RULES)} className="text-xs px-3 py-1.5 rounded-lg text-[#3B312D]/50 hover:bg-[#F8F4EF] flex items-center gap-1.5"><RotateCcw size={12} />Réinitialiser</button>
+            </div>
+
+            <div className="flex items-center gap-2 mt-5 pt-4 border-t border-[#F8F4EF]">
+              <button onClick={() => setShowColors(false)} className="flex-1 px-4 py-2.5 bg-[#F8F4EF] text-[#3B312D] text-sm rounded-lg font-medium">Annuler</button>
+              <button onClick={saveColors} disabled={savingColors} className="flex-1 px-4 py-2.5 bg-[#C98F79] text-white text-sm rounded-lg font-medium flex items-center justify-center gap-2 disabled:opacity-50">{savingColors && <Loader2 size={14} className="animate-spin" />}Enregistrer</button>
+            </div>
           </div>
         </div>
       )}

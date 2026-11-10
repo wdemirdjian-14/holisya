@@ -10,7 +10,7 @@ export default function MobileNav() {
   const { data: session } = useSession() || {};
 
   // Masquer la barre dans l'admin (interface dédiée)
-  if (pathname.startsWith('/admin')) return null;
+  if (pathname.startsWith('/admin') || pathname.startsWith('/agenda')) return null;
 
   const spaceHref = session?.user ? '/espace-membre' : '/connexion';
   const items = [

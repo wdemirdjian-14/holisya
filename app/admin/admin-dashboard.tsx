@@ -41,7 +41,7 @@ function toLocalInputValue(d: Date): string {
 
 type Tab = 'overview' | 'caisse' | 'clients' | 'appointments' | 'booking' | 'giftcards' | 'subscriptions' | 'promos' | 'blog' | 'contacts' | 'testimonials' | 'services' | 'videos' | 'emails' | 'gallery' | 'content' | 'seo' | 'settings';
 
-export default function AdminDashboard() {
+export default function AdminDashboard({ agendaOnly = false }: { agendaOnly?: boolean } = {}) {
   const { data: session, status } = useSession() || {};
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>('appointments');
@@ -49,7 +49,7 @@ export default function AdminDashboard() {
   const searchParams = useSearchParams();
   const urlTab = searchParams?.get('tab') as Tab | null;
   const urlSection = searchParams?.get('section') ?? undefined;
-  useEffect(() => { if (urlTab) setActiveTab(urlTab); }, [urlTab, urlSection]);
+  useEffect(() => { if (urlTab && !agendaOnly) setActiveTab(urlTab); }, [urlTab, urlSection, agendaOnly]);
   const [stats, setStats] = useState<any>(null);
   const [clients, setClients] = useState<any[]>([]);
   const [appointments, setAppointments] = useState<any[]>([]);
@@ -463,7 +463,8 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="max-w-[1200px] mx-auto px-3 sm:px-4 py-6 sm:py-10">
+    <div className={agendaOnly ? 'max-w-[1500px] mx-auto px-2 sm:px-4 py-3' : 'max-w-[1200px] mx-auto px-3 sm:px-4 py-6 sm:py-10'}>
+      {!agendaOnly && <>
       <h1 className="font-playfair text-2xl sm:text-3xl font-bold text-[#3B312D] mb-1 sm:mb-2">Administration</h1>
       <p className="text-sm text-[#3B312D]/60 mb-5 sm:mb-8">Tableau de bord Holisya</p>
 
@@ -481,6 +482,7 @@ export default function AdminDashboard() {
           })}
         </div>
       </div>
+      </>}
 
       {/* Overview Tab */}
       {activeTab === 'overview' && (
@@ -720,7 +722,14 @@ export default function AdminDashboard() {
       {activeTab === 'appointments' && (
         <div>
           <div className="flex justify-between mb-6">
-            <h2 className="font-playfair text-xl font-semibold text-[#3B312D]">Agenda des rendez-vous</h2>
+            {agendaOnly ? (
+              <div className="flex items-center gap-3">
+                <h2 className="font-playfair text-xl font-semibold text-[#3B312D]">Holisya Agenda</h2>
+                <a href="/admin?tab=appointments" className="text-xs text-[#C98F79] underline hover:text-[#C98F79]/80">Admin complet</a>
+              </div>
+            ) : (
+              <h2 className="font-playfair text-xl font-semibold text-[#3B312D]">Agenda des rendez-vous</h2>
+            )}
             <div className="flex items-center gap-2">
               <div className="flex bg-white rounded-lg shadow-sm p-1">
                 <button onClick={() => setAppointmentsView('calendar')} className={`px-3 py-1.5 text-xs font-medium rounded-md ${appointmentsView === 'calendar' ? 'bg-[#C98F79] text-white' : 'text-[#3B312D]/60'}`}>Calendrier</button>
@@ -740,6 +749,7 @@ export default function AdminDashboard() {
               onBlockClick={openBlockModal}
               onBlockDelete={deleteBlock}
               blockRefresh={blockRefresh}
+              fullscreenHref={agendaOnly ? undefined : '/agenda'}
             />
           ) : (
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">

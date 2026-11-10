@@ -12,7 +12,7 @@ const IG_URL = 'https://www.instagram.com/holisya_/';
 
 export default function InstagramWidget() {
   const pathname = usePathname() || '';
-  if (pathname.startsWith('/admin') || pathname.startsWith('/rendez-vous')) return null;
+  if (pathname.startsWith('/admin') || pathname.startsWith('/rendez-vous') || pathname.startsWith('/agenda')) return null;
 
   return (
     <a

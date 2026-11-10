@@ -1,10 +1,12 @@
 'use client';
 import { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, X, Send, Phone, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function ContactWidget() {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ firstName: '', phone: '', message: '' });
@@ -21,6 +23,8 @@ export default function ContactWidget() {
     } catch { toast.error('Erreur de connexion'); }
     setLoading(false);
   };
+
+  if (pathname?.startsWith('/admin') || pathname?.startsWith('/agenda')) return null;
 
   return (
     <>
