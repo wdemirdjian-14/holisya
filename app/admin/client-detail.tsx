@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { X, Loader2, Calendar, Euro, Gift, Crown, Mail, Save, Phone, Award, Smile } from 'lucide-react';
+import { X, Loader2, Calendar, Euro, Gift, Crown, Mail, Save, Phone, Award, Smile, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 
 const PAY_LABEL: Record<string, string> = { CASH: 'Espèces', CARD: 'CB', GIFT_CARD: 'Carte cadeau' };
@@ -34,6 +34,15 @@ export default function ClientDetail({ clientId, onClose }: { clientId: string; 
       if (res.ok) toast.success(val ? 'Email marqué comme ne fonctionnant plus' : 'Email marqué comme fonctionnel');
       else { toast.error('Erreur'); setData((d: any) => ({ ...d, client: { ...d.client, emailBounced: !val } })); }
     } catch { toast.error('Erreur'); setData((d: any) => ({ ...d, client: { ...d.client, emailBounced: !val } })); }
+  };
+
+  const toggleExempt = async (val: boolean) => {
+    setData((d: any) => ({ ...d, client: { ...d.client, exemptCardImprint: val } })); // optimiste
+    try {
+      const res = await fetch('/api/admin/client', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: clientId, exemptCardImprint: val }) });
+      if (res.ok) toast.success(val ? 'Cliente approuvée — réservation sans empreinte' : 'Empreinte / paiement de nouveau demandés');
+      else { toast.error('Erreur'); setData((d: any) => ({ ...d, client: { ...d.client, exemptCardImprint: !val } })); }
+    } catch { toast.error('Erreur'); setData((d: any) => ({ ...d, client: { ...d.client, exemptCardImprint: !val } })); }
   };
 
   const c = data?.client;
@@ -81,6 +90,20 @@ export default function ClientDetail({ clientId, onClose }: { clientId: string; 
                   {c.emailBounced
                     ? 'Adresse signalée comme non délivrable — à vérifier ou contacter autrement. Décochez une fois corrigée.'
                     : 'Cochez si l\'adresse est invalide / n\'aboutit pas. Se coche aussi automatiquement en cas d\'échec d\'envoi.'}
+                </span>
+              </span>
+            </label>
+
+            {/* Client fidèle approuvé : réservation sans empreinte CB ni paiement */}
+            <label className={`rounded-xl p-4 flex items-start gap-3 cursor-pointer select-none transition-colors ${c.exemptCardImprint ? 'bg-[#AAB7A0]/15 border border-[#AAB7A0]/40' : 'bg-white'}`}>
+              <input type="checkbox" checked={!!c.exemptCardImprint} onChange={(e) => toggleExempt(e.target.checked)}
+                className="mt-0.5 w-4 h-4 shrink-0 accent-[#AAB7A0] cursor-pointer" />
+              <span className={`text-sm ${c.exemptCardImprint ? 'text-[#3B312D]' : 'text-[#3B312D]/70'}`}>
+                <span className="flex items-center gap-1.5 font-medium"><ShieldCheck size={14} className="text-[#AAB7A0]" />Cliente fidèle approuvée — sans empreinte CB</span>
+                <span className="block text-xs mt-0.5 opacity-80">
+                  {c.exemptCardImprint
+                    ? 'Cette cliente réserve en ligne directement, sans empreinte bancaire ni paiement.'
+                    : 'Cochez pour autoriser cette cliente de confiance à réserver sans empreinte ni paiement en ligne.'}
                 </span>
               </span>
             </label>

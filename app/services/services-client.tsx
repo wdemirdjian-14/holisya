@@ -49,6 +49,7 @@ function getIcon(category: string) {
 
 export default function ServicesClient() {
   const [services, setServices] = useState<any[]>(defaultServices);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const reduce = useReducedMotion();
 
   useEffect(() => {
@@ -74,6 +75,10 @@ export default function ServicesClient() {
           <div className="grid gap-6 sm:gap-7 sm:grid-cols-2 lg:grid-cols-3">
             {services.map((s: any, i: number) => {
               const Icon = getIcon(s?.category ?? '');
+              const key = String(s?.id ?? i);
+              const desc = s?.description ?? '';
+              const isExp = !!expanded[key];
+              const canExpand = desc.length > 120;
               return (
                 <motion.article
                   key={s?.id ?? i}
@@ -98,7 +103,13 @@ export default function ServicesClient() {
                       <span className="text-[11px] uppercase tracking-wider text-[#C98F79] font-semibold line-clamp-1">{s?.category ?? ''}</span>
                     </div>
                     <h2 className="font-playfair text-xl font-bold text-[#3B312D] leading-snug">{s?.name ?? ''}</h2>
-                    <p className="text-sm text-[#3B312D]/60 mt-2 leading-relaxed line-clamp-3">{s?.description ?? ''}</p>
+                    <p className={`text-sm text-[#3B312D]/60 mt-2 leading-relaxed whitespace-pre-line ${isExp ? '' : 'line-clamp-3'}`}>{desc}</p>
+                    {canExpand && (
+                      <button type="button" onClick={() => setExpanded((prev) => ({ ...prev, [key]: !isExp }))}
+                        className="mt-1 self-start text-xs font-medium text-[#C98F79] hover:text-[#b87d68]">
+                        {isExp ? 'Réduire' : 'Lire la suite'}
+                      </button>
+                    )}
 
                     <div className="mt-auto pt-4">
                       <div className="flex items-center justify-between border-t border-[#F8F4EF] pt-3">

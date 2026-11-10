@@ -48,6 +48,7 @@ export async function PUT(req: NextRequest) {
     const upd: any = {};
     if (data?.privateNotes !== undefined) upd.privateNotes = data.privateNotes ?? '';
     if (data?.emailBounced !== undefined) upd.emailBounced = !!data.emailBounced;
+    if (data?.exemptCardImprint !== undefined) upd.exemptCardImprint = !!data.exemptCardImprint;
     await prisma.user.update({ where: { id: data.id }, data: upd });
     return NextResponse.json({ success: true });
   } catch (error: any) {
