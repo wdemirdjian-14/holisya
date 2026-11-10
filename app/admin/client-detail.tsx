@@ -1,11 +1,11 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { X, Loader2, Calendar, Euro, Gift, Crown, Mail, Save, Phone, Award, Smile, ShieldCheck } from 'lucide-react';
+import { X, Loader2, Calendar, Euro, Gift, Crown, Mail, Save, Phone, Award, Smile, ShieldCheck, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 
 const PAY_LABEL: Record<string, string> = { CASH: 'Espèces', CARD: 'CB', GIFT_CARD: 'Carte cadeau' };
 
-export default function ClientDetail({ clientId, onClose }: { clientId: string; onClose: () => void }) {
+export default function ClientDetail({ clientId, onClose, onEdit }: { clientId: string; onClose: () => void; onEdit?: (client: any) => void }) {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [notes, setNotes] = useState('');
@@ -53,7 +53,12 @@ export default function ClientDetail({ clientId, onClose }: { clientId: string; 
       <div className="bg-[#F8F4EF] w-full sm:max-w-2xl sm:rounded-2xl min-h-full sm:min-h-0 sm:max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="sticky top-0 bg-white px-5 py-4 flex items-center justify-between border-b border-[#F8F4EF] z-10">
           <h3 className="font-playfair text-lg font-semibold text-[#3B312D]">Fiche client</h3>
-          <button onClick={onClose} className="p-1.5 rounded hover:bg-[#F8F4EF]"><X size={20} /></button>
+          <div className="flex items-center gap-2">
+            {c && onEdit && (
+              <button onClick={() => onEdit(c)} className="px-3 py-1.5 rounded-lg bg-[#C98F79] text-white text-sm font-medium flex items-center gap-1.5 hover:bg-[#b87d68]"><Pencil size={14} />Modifier</button>
+            )}
+            <button onClick={onClose} className="p-1.5 rounded hover:bg-[#F8F4EF]"><X size={20} /></button>
+          </div>
         </div>
 
         {loading ? (

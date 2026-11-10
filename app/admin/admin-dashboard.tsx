@@ -1064,7 +1064,7 @@ export default function AdminDashboard({ agendaOnly = false }: { agendaOnly?: bo
       {activeTab === 'settings' && <SettingsTab />}
 
       {/* Fiche client 360° */}
-      {detailClientId && <ClientDetail clientId={detailClientId} onClose={() => { setDetailClientId(null); refreshData(); }} />}
+      {detailClientId && <ClientDetail clientId={detailClientId} onClose={() => { setDetailClientId(null); refreshData(); }} onEdit={(client) => { setDetailClientId(null); setModalData(client); setShowModal('edit-client'); }} />}
 
       {/* Modals */}
       {showModal && (
@@ -1487,6 +1487,12 @@ export default function AdminDashboard({ agendaOnly = false }: { agendaOnly?: bo
                     <input value={modalData?.firstName ?? ''} onChange={(e: any) => setModalData({...(modalData ?? {}), firstName: e.target?.value ?? ''})} className="w-full mt-1 px-4 py-3 text-sm border border-[#F8F4EF] rounded-lg bg-[#F8F4EF]/50 text-[#3B312D]" /></div>
                   <div><label className="text-sm font-medium text-[#3B312D]/70">Nom</label>
                     <input value={modalData?.lastName ?? ''} onChange={(e: any) => setModalData({...(modalData ?? {}), lastName: e.target?.value ?? ''})} className="w-full mt-1 px-4 py-3 text-sm border border-[#F8F4EF] rounded-lg bg-[#F8F4EF]/50 text-[#3B312D]" /></div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div><label className="text-sm font-medium text-[#3B312D]/70">Téléphone</label>
+                    <input value={modalData?.phone ?? ''} onChange={(e: any) => setModalData({...(modalData ?? {}), phone: e.target?.value ?? ''})} placeholder="06 12 34 56 78" className="w-full mt-1 px-4 py-3 text-sm border border-[#F8F4EF] rounded-lg bg-[#F8F4EF]/50 text-[#3B312D]" /></div>
+                  <div><label className="text-sm font-medium text-[#3B312D]/70">Email <span className="text-[10px] text-[#3B312D]/40">(non modifiable)</span></label>
+                    <input value={modalData?.email ?? ''} disabled className="w-full mt-1 px-4 py-3 text-sm border border-[#F8F4EF] rounded-lg bg-[#F8F4EF]/30 text-[#3B312D]/50" /></div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div><label className="text-sm font-medium text-[#3B312D]/70">Code postal</label>
