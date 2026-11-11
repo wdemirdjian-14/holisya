@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { X, Loader2, Calendar, Euro, Gift, Crown, Mail, Save, Phone, Award, Smile, ShieldCheck, Pencil } from 'lucide-react';
+import { X, Loader2, Calendar, Euro, Gift, Crown, Mail, Save, Phone, Award, Smile, ShieldCheck, Pencil, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
 
 const PAY_LABEL: Record<string, string> = { CASH: 'Espèces', CARD: 'CB', GIFT_CARD: 'Carte cadeau' };
@@ -10,6 +10,9 @@ export default function ClientDetail({ clientId, onClose, onEdit }: { clientId: 
   const [loading, setLoading] = useState(true);
   const [notes, setNotes] = useState('');
   const [savingNotes, setSavingNotes] = useState(false);
+  const [payAmount, setPayAmount] = useState('');
+  const [payLabel, setPayLabel] = useState('');
+  const [sendingLink, setSendingLink] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -43,6 +46,19 @@ export default function ClientDetail({ clientId, onClose, onEdit }: { clientId: 
       if (res.ok) toast.success(val ? 'Cliente approuvée — réservation sans empreinte' : 'Empreinte / paiement de nouveau demandés');
       else { toast.error('Erreur'); setData((d: any) => ({ ...d, client: { ...d.client, exemptCardImprint: !val } })); }
     } catch { toast.error('Erreur'); setData((d: any) => ({ ...d, client: { ...d.client, exemptCardImprint: !val } })); }
+  };
+
+  const sendPaymentLink = async () => {
+    const amount = parseFloat(String(payAmount).replace(',', '.'));
+    if (!amount || amount <= 0) { toast.error('Montant invalide'); return; }
+    setSendingLink(true);
+    try {
+      const res = await fetch('/api/admin/payment-link', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: data?.client?.email, firstName: data?.client?.firstName, amount, label: payLabel }) });
+      const d = await res.json();
+      if (res.ok && d?.success) { toast.success('Lien de paiement envoyé par email'); setPayAmount(''); setPayLabel(''); }
+      else toast.error(d?.error ?? 'Erreur');
+    } catch { toast.error('Erreur'); }
+    setSendingLink(false);
   };
 
   const c = data?.client;
@@ -112,6 +128,19 @@ export default function ClientDetail({ clientId, onClose, onEdit }: { clientId: 
                 </span>
               </span>
             </label>
+
+            {/* Envoyer un lien de paiement Stripe (montant libre) */}
+            <div className="bg-white rounded-xl p-5">
+              <h4 className="text-sm font-semibold text-[#3B312D] mb-1 flex items-center gap-1.5"><CreditCard size={15} className="text-[#C98F79]" />Envoyer un lien de paiement</h4>
+              <p className="text-xs text-[#3B312D]/50 mb-3">Génère un lien de paiement Stripe du montant de votre choix, envoyé par email à {c.email}.</p>
+              <div className="flex gap-2 flex-wrap items-end">
+                <div><label className="text-[11px] text-[#3B312D]/50">Montant (€)</label>
+                  <input type="number" min={1} step="0.01" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} placeholder="50" className="block mt-1 w-24 px-3 py-2 text-sm border border-[#F8F4EF] rounded-lg bg-[#F8F4EF]/50 text-[#3B312D]" /></div>
+                <div className="flex-1 min-w-[140px]"><label className="text-[11px] text-[#3B312D]/50">Libellé (facultatif)</label>
+                  <input value={payLabel} onChange={(e) => setPayLabel(e.target.value)} placeholder="Acompte cure Kobido" className="block mt-1 w-full px-3 py-2 text-sm border border-[#F8F4EF] rounded-lg bg-[#F8F4EF]/50 text-[#3B312D]" /></div>
+                <button onClick={sendPaymentLink} disabled={sendingLink} className="px-4 py-2 bg-[#C98F79] text-white text-sm rounded-lg flex items-center gap-1.5 disabled:opacity-50">{sendingLink ? <Loader2 size={14} className="animate-spin" /> : <Mail size={14} />}Envoyer</button>
+              </div>
+            </div>
 
             {/* Notes privées */}
             <div className="bg-white rounded-xl p-5">

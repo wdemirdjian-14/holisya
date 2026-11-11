@@ -358,6 +358,22 @@ export default function AdminDashboard({ agendaOnly = false }: { agendaOnly?: bo
   };
 
   // Dupliquer un RDV (même cliente / soin / durée) sur un autre jour — pré-rempli à +1 semaine.
+  const chargeImprint = async (apt: any) => {
+    const svc = (services ?? []).find((s: any) => s?.name === apt?.serviceType);
+    const def = svc?.price ?? '';
+    const input = window.prompt('Montant à débiter (€) sur la carte enregistrée en empreinte :', String(def || ''));
+    if (input === null) return;
+    const amount = parseFloat(String(input).replace(',', '.'));
+    if (!amount || amount <= 0) { toast.error('Montant invalide'); return; }
+    if (!confirm(`Débiter ${amount} € sur la carte de la cliente ? Le prélèvement est immédiat.`)) return;
+    try {
+      const res = await fetch('/api/admin/charge-imprint', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ appointmentId: apt.id, amount }) });
+      const d = await res.json();
+      if (res.ok && d?.success) { toast.success('Carte débitée · encaissement enregistré'); setShowModal(null); refreshData(); }
+      else toast.error(d?.error ?? 'Erreur');
+    } catch { toast.error('Erreur'); }
+  };
+
   const duplicateAppointment = (apt: any) => {
     const base = apt?.date ? new Date(apt.date) : (apt?.dateLocal ? new Date(apt.dateLocal) : new Date());
     const next = new Date(base.getTime() + 7 * 24 * 60 * 60000);
@@ -1370,6 +1386,16 @@ export default function AdminDashboard({ agendaOnly = false }: { agendaOnly?: bo
                   <button onClick={() => duplicateAppointment(modalData)} className="w-full py-2.5 bg-white border border-[#3B312D]/20 text-[#3B312D] text-sm font-medium rounded-lg hover:bg-[#3B312D]/5 flex items-center justify-center gap-2">
                     <Plus size={14} />Dupliquer ce RDV à un autre jour
                   </button>
+                )}
+
+                {showModal === 'edit-appointment' && modalData?.id && modalData?.imprintSetupId && !modalData?.onlinePaymentRef && (
+                  <div className="bg-[#C98F79]/10 border border-[#C98F79]/30 rounded-xl p-3">
+                    <p className="text-xs text-[#3B312D]/70 mb-2 flex items-center gap-1.5"><Lock size={13} className="text-[#C98F79]" />Empreinte bancaire enregistrée — en cas d'absence ou d'annulation tardive, vous pouvez débiter la carte.</p>
+                    <button onClick={() => chargeImprint(modalData)}
+                      className="w-full py-2.5 bg-[#C98F79] text-white text-sm font-medium rounded-lg hover:bg-[#b87d68] flex items-center justify-center gap-2">
+                      <Euro size={14} />Débiter l'empreinte (absence / annulation tardive)
+                    </button>
+                  </div>
                 )}
 
                 {showModal === 'edit-appointment' && modalData?.id && (

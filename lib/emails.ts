@@ -85,6 +85,23 @@ export function paymentReceiptEmail(opts: { firstName?: string; serviceType: str
   return emailShell('Paiement reçu 🌸', inner, { showContact: true });
 }
 
+/** Lien de paiement Stripe envoyé par l'institut pour un montant libre. */
+export function paymentLinkEmail(opts: { firstName?: string; label: string; amount: number; url: string }): string {
+  const amountStr = Number.isInteger(opts.amount) ? `${opts.amount}` : opts.amount.toFixed(2);
+  const inner = `
+    <p style="color:${C.ink};">Bonjour ${opts.firstName || ''},</p>
+    <p style="color:${C.ink};">Voici votre lien de paiement sécurisé pour :</p>
+    <table role="presentation" width="100%" style="margin:14px 0;background:${C.cream};border-radius:12px;"><tr><td style="padding:16px 20px;">
+      <p style="margin:4px 0;color:${C.ink};"><strong>${opts.label}</strong></p>
+      <p style="margin:8px 0 0;color:${C.terraDeep};font-size:20px;font-weight:bold;">${amountStr} €</p>
+    </td></tr></table>
+    <div style="text-align:center;margin:22px 0;">
+      ${emailButton('💳 Régler en ligne', opts.url)}
+    </div>
+    <p style="color:${C.muted};font-size:12px;">Paiement sécurisé par Stripe. Si le bouton ne fonctionne pas, copiez ce lien : <br/><span style="word-break:break-all;color:${C.terra};">${opts.url}</span></p>`;
+  return emailShell('Votre lien de paiement 🌸', inner, { showContact: true });
+}
+
 /** Email de remerciement post-soin + invitation à laisser un avis Google. */
 export function thankYouReviewEmail(opts: { firstName: string; serviceType?: string }): string {
   const inner = `
