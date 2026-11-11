@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { deductGiftCardBalance } from '@/lib/gift-card';
 import { onPaymentRecorded } from '@/lib/loyalty';
+import { notifyPaymentReceived } from '@/lib/booking-notify';
 
 export async function POST(req: NextRequest) {
   try {
@@ -33,6 +34,7 @@ export async function POST(req: NextRequest) {
     // Fidélité : points + récompense parrainage au 1er paiement du filleul.
     const appt = await prisma.appointment.findUnique({ where: { id: data.appointmentId }, select: { userId: true } });
     if (appt?.userId) await onPaymentRecorded(appt.userId, amount).catch((e) => console.error('loyalty error', e));
+    await notifyPaymentReceived(data.appointmentId, amount, data.method);
 
     return NextResponse.json({ payment });
   } catch (error: any) {

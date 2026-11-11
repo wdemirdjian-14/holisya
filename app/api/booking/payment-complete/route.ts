@@ -5,7 +5,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { stripe } from '@/lib/stripe';
 import { onPaymentRecorded } from '@/lib/loyalty';
-import { notifyBookingCreated } from '@/lib/booking-notify';
+import { notifyBookingCreated, notifyPaymentReceived } from '@/lib/booking-notify';
 
 // Finalise un paiement en ligne (prix total) : enregistre l'encaissement (CB) et confirme le RDV.
 export async function POST(request: Request) {
@@ -35,6 +35,7 @@ export async function POST(request: Request) {
     if (appt.userId) await onPaymentRecorded(appt.userId, amount).catch((e) => console.error('loyalty error', e));
 
     await notifyBookingCreated(appt.id);
+    await notifyPaymentReceived(appt.id, amount, 'ONLINE');
     return NextResponse.json({ success: true, status: 'CONFIRMED' });
   } catch (error: any) {
     console.error('Payment complete error:', error);

@@ -25,6 +25,7 @@ export default function ConfirmationClient({ imprint, cancelled, paid }: { impri
           <div className="w-14 h-14 bg-[#AAB7A0]/20 rounded-full flex items-center justify-center mx-auto mb-4"><Check size={26} className="text-[#AAB7A0]" /></div>
           <h1 className="font-playfair text-2xl font-bold text-[#3B312D]">{state === 'ok' ? 'Rendez-vous confirmé !' : 'Demande enregistrée !'}</h1>
           <p className="text-[#3B312D]/60 mt-2 text-sm">{paid ? 'Votre paiement a bien été reçu, votre rendez-vous est confirmé.' : `Votre empreinte bancaire a bien été enregistrée (aucun débit).${state === 'pending' ? ' Nous confirmerons votre créneau rapidement.' : ''}`}</p>
+          {!paid && <p className="text-[#3B312D]/45 mt-3 text-xs bg-[#F8F4EF] rounded-lg px-3 py-2">Aucun montant n'est prélevé. En cas d'annulation moins de 24 h à l'avance sans prévenir Holisya, ou d'absence, la prestation pourra être débitée.</p>}
           <a href="/espace-membre/rendez-vous" className="inline-block mt-6 px-6 py-3 bg-[#C98F79] text-white text-sm font-medium rounded-lg">Voir mes rendez-vous</a>
         </div>
       )}

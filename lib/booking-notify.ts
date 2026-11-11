@@ -1,13 +1,32 @@
 import { prisma } from '@/lib/db';
 import { notifyAdmins, notifyUser } from '@/lib/notify';
 import { sendNotificationEmail } from '@/lib/notifications';
-import { appointmentEmail, emailShell, emailButton } from '@/lib/emails';
+import { appointmentEmail, emailShell, emailButton, paymentReceiptEmail } from '@/lib/emails';
 import { SITE_URL, BUSINESS } from '@/lib/business';
+
+const PAY_METHOD_LABEL: Record<string, string> = { CASH: 'Espèces', CARD: 'Carte bleue', GIFT_CARD: 'Carte cadeau', ONLINE: 'Carte bleue (en ligne)' };
+
+// Envoie un reçu de paiement à la cliente (paiement en ligne ou encaissement en caisse).
+export async function notifyPaymentReceived(apptId: string, amount: number, method: string) {
+  try {
+    const appt = await prisma.appointment.findUnique({ where: { id: apptId }, include: { user: { select: { email: true, firstName: true, emailOptOut: true } } } });
+    if (!appt?.user?.email || appt.user.emailOptOut) return;
+    const when = new Date(appt.date).toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+    const methodLabel = PAY_METHOD_LABEL[method] ?? method;
+    await sendNotificationEmail({
+      subject: 'Votre reçu de paiement Holisya 🌸',
+      recipientEmail: appt.user.email,
+      replyTo: 'contact@holisya.fr',
+      body: paymentReceiptEmail({ firstName: appt.user.firstName ?? '', serviceType: appt.serviceType ?? 'Soin', whenLabel: when, amount, methodLabel }),
+    });
+  } catch (e) { console.error('payment receipt email error', e); }
+}
 
 // Notifie admin + cliente et envoie les emails liés à une réservation.
 export async function notifyBookingCreated(apptId: string) {
   const appt = await prisma.appointment.findUnique({ where: { id: apptId }, include: { user: { select: { email: true, firstName: true, lastName: true, phone: true } } } });
   if (!appt) return;
+  const hasImprint = !!appt.imprintSetupId;
   const name = `${appt.user?.firstName ?? ''} ${appt.user?.lastName ?? ''}`.trim();
   const email = appt.user?.email ?? '';
   const phone = appt.user?.phone ?? '';
@@ -23,7 +42,7 @@ export async function notifyBookingCreated(apptId: string) {
       subject: confirmed ? 'Votre rendez-vous Holisya est confirmé 🌸' : 'Votre demande de rendez-vous Holisya 🌸',
       recipientEmail: email,
       replyTo: 'contact@holisya.fr',
-      body: appointmentEmail({ confirmed, serviceType: appt.serviceType ?? 'Soin', whenLabel: when }),
+      body: appointmentEmail({ confirmed, serviceType: appt.serviceType ?? 'Soin', whenLabel: when, hasImprint }),
     });
   }
 

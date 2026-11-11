@@ -245,7 +245,10 @@ export default function BookingClient() {
                         {confirming ? <Loader2 size={16} className="animate-spin" /> : <CreditCard size={16} />}
                         {canPay ? 'Empreinte bancaire (sans débit)' : 'Réserver avec empreinte bancaire'}
                     </button>
-                    <p className="text-[11px] text-[#3B312D]/40 text-center">L'empreinte enregistre votre carte <strong>sans aucun débit</strong> — vous réglez sur place. {canPay ? 'Le paiement en ligne règle le soin à l’avance.' : ''}</p>
+                    <div className="text-[11px] text-[#3B312D]/55 bg-[#F8F4EF]/70 rounded-lg px-3 py-2 leading-relaxed">
+                      L'empreinte enregistre votre carte <strong>sans aucun débit</strong> — vous réglez sur place.{canPay ? ' Le paiement en ligne règle le soin à l’avance.' : ''}
+                      <br />En cas d'<strong>annulation moins de 24 h à l'avance sans prévenir Holisya</strong>, ou d'absence, la prestation pourra être débitée.
+                    </div>
                   </div>
                 ) : (
                   <button onClick={() => confirm()} disabled={confirming} className="w-full py-3.5 bg-[#C98F79] text-white font-medium rounded-lg disabled:opacity-50 flex items-center justify-center gap-2">

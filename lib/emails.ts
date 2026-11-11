@@ -33,7 +33,7 @@ export function emailShell(title: string, innerHtml: string, opts?: { showContac
     <div style="max-width:600px;margin:0 auto;">
       <div style="text-align:center;padding:6px 0 20px;">
         <span style="font-family:Georgia,serif;font-size:26px;letter-spacing:4px;color:${C.ink};">HOLISYA</span>
-        <div style="font-size:10px;letter-spacing:4px;color:${C.sage};margin-top:3px;">BOULOGNE-BILLANCOURT · PARIS</div>
+        <div style="font-size:11px;letter-spacing:4px;color:${C.sage};margin-top:3px;">ANTIBES <span style="font-size:8px;letter-spacing:1px;color:#b3a9a2;">by Paris</span></div>
       </div>
       <table role="presentation" width="100%" style="background:${C.paper};border-radius:16px;box-shadow:0 2px 10px rgba(59,49,45,.06);"><tr><td style="padding:34px 30px;">
         ${title ? `<h1 style="margin:0 0 18px;color:${C.ink};font-family:Georgia,serif;font-size:22px;text-align:center;font-weight:normal;">${title}</h1>` : ''}
@@ -58,14 +58,31 @@ export function appointmentActions(): string {
 }
 
 /** Email de confirmation / demande de RDV. */
-export function appointmentEmail(opts: { confirmed: boolean; serviceType: string; whenLabel: string }): string {
+export function appointmentEmail(opts: { confirmed: boolean; serviceType: string; whenLabel: string; hasImprint?: boolean }): string {
   const inner = `
     <p style="color:${C.ink};margin:0 0 4px;">Votre soin</p>
     <p style="color:${C.ink};font-size:18px;font-weight:bold;margin:0 0 10px;">${opts.serviceType}</p>
     <p style="color:${C.terraDeep};font-weight:bold;font-size:17px;margin:0 0 14px;">${opts.whenLabel}</p>
     <p style="color:${C.muted};font-size:13px;margin:0;">${opts.confirmed ? 'Nous avons hâte de vous accueillir.' : 'Nous confirmerons votre créneau très rapidement.'}</p>
+    ${opts.hasImprint ? `<div style="background:${C.cream};border-radius:10px;padding:12px 16px;margin:16px 0 0;"><p style="margin:0;color:${C.muted};font-size:12px;line-height:1.5;">Votre carte a été enregistrée en empreinte — <strong>aucun montant n'est prélevé</strong>, vous réglez sur place. En cas d'<strong>annulation moins de 24 h à l'avance sans prévenir Holisya</strong>, ou d'absence, la prestation pourra être débitée.</p></div>` : ''}
     ${appointmentActions()}`;
   return emailShell(opts.confirmed ? 'Rendez-vous confirmé 🌸' : 'Demande enregistrée 🌸', inner, { showContact: true });
+}
+
+/** Reçu de paiement envoyé à la cliente (paiement en ligne ou encaissement en caisse). */
+export function paymentReceiptEmail(opts: { firstName?: string; serviceType: string; whenLabel?: string; amount: number; methodLabel: string }): string {
+  const amountStr = Number.isInteger(opts.amount) ? `${opts.amount}` : opts.amount.toFixed(2);
+  const inner = `
+    <p style="color:${C.ink};">Bonjour ${opts.firstName || ''},</p>
+    <p style="color:${C.ink};">Nous confirmons la bonne réception de votre paiement. Un grand merci ! 🌸</p>
+    <table role="presentation" width="100%" style="margin:16px 0;background:${C.cream};border-radius:12px;"><tr><td style="padding:16px 20px;">
+      <p style="margin:4px 0;color:${C.ink};"><strong>Soin :</strong> ${opts.serviceType}</p>
+      ${opts.whenLabel ? `<p style="margin:4px 0;color:${C.ink};"><strong>Rendez-vous :</strong> ${opts.whenLabel}</p>` : ''}
+      <p style="margin:4px 0;color:${C.ink};"><strong>Moyen de paiement :</strong> ${opts.methodLabel}</p>
+      <p style="margin:10px 0 2px;color:${C.terraDeep};font-size:18px;font-weight:bold;">Montant réglé : ${amountStr} €</p>
+    </td></tr></table>
+    <p style="color:${C.muted};font-size:13px;margin:0;">Ce message tient lieu de reçu. Pour toute question, répondez simplement à cet email.</p>`;
+  return emailShell('Paiement reçu 🌸', inner, { showContact: true });
 }
 
 /** Email de remerciement post-soin + invitation à laisser un avis Google. */
